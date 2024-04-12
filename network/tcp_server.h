@@ -16,6 +16,8 @@
 #include <vector>
 
 using boost::asio::ip::tcp;
+namespace this_coro = boost::asio::this_coro;
+using boost::asio::detached;
 
 
 class http_protocol_factory {

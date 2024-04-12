@@ -30,7 +30,7 @@ public:
 
     boost::asio::awaitable<void> handle() {
         try {
-            for (;;) {
+            while (transport_->is_open()) {
                 char data[1024];
                 memset(data, 0, 1024);
                 auto buffer = boost::asio::buffer(data);
@@ -38,7 +38,9 @@ public:
                 request_parser_.parse(data, data_len, raw_request_message_);
                 if (request_parser_.is_complete()) {
                     http::http_response response = co_await request_handler_->handle_request(raw_request_message_);
-                    co_await transport_->write(boost::asio::buffer(response.format_headers() + "\r\n"));
+                    std::string status_line = "HTTP/1.1 200 HTTP_OK\r\n";
+                    co_await transport_->write(boost::asio::buffer(status_line + response.format_headers()));
+                    transport_->close();
                 }
             }
         } catch (std::exception& e) {

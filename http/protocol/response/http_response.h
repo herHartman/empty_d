@@ -13,11 +13,14 @@ namespace http {
     class http_response {
     public:
         std::string format_headers() const { return headers_.format_headers(); }
+        void prepare_headers();
+        void set_cookie(const std::string& name, const std::string& value);
+        std::string get_cookie() const;
+        
     private:
         http::web::http_headers headers_;
         int status;
         std::string body;
-        void prepare_headers();
     };
 }
 

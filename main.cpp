@@ -15,12 +15,12 @@ awaitable<http::http_response> handler(const http::raw_request_message& request_
 }
 
 int main() {
-
     boost::asio::io_context io_context(1);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
 
     http::web::web_application application = http::web::web_application(io_context, 8080);
+    application.add_route("/auth/guest", &handler, http::http_methods::HTTP_GET);
     co_spawn(io_context, application.start(), detached);
     io_context.run();
 

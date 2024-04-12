@@ -52,6 +52,7 @@ namespace http::web {
         for (const auto & header : headers_) {
             buf << header.first << ": " << header.second << "\r\n";
         }
+        buf << "\r\n";
         return buf.str();
     }
 }

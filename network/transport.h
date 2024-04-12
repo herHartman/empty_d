@@ -29,10 +29,20 @@ namespace network {
         awaitable<void> write(const ConstBufferSequence& buffers) {
             co_await socket_.async_write_some(buffers, boost::asio::use_awaitable);
         }
-        
+
+        bool is_open() const {
+            socket_.is_open();
+        }
+
+        void close() {
+            socket_.shutdown(tcp::socket::shutdown_send);
+            socket_.close();
+        }
+
     private:
         tcp::socket socket_;
     };
+
 } // namespace network
 
 #endif // EMPTY_HTTP_SERVER_TRANSPORT_H

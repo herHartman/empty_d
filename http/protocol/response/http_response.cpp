@@ -7,3 +7,11 @@
 void http::http_response::prepare_headers() {
 
 }
+
+void http::http_response::set_cookie(const std::string &name, const std::string &value) {
+
+}
+
+std::string http::http_response::get_cookie() const {
+    return std::string();
+}
