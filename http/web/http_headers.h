@@ -42,6 +42,8 @@ namespace http::web {
 
     void add(const std::string& header_name, const std::string& header_value);
 
+    std::string format_headers() const;
+
     private:
         std::unordered_map<std::string, std::string> headers_;
     };

@@ -24,4 +24,6 @@ add_executable(empty_d main.cpp
         http/web/http_statuse.h
         http/web/http_headers.h
         http/web/http_headers.cpp
+        http/protocol/http_writer.cpp
+        http/protocol/http_writer.h
 )

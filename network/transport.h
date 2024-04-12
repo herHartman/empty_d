@@ -21,12 +21,13 @@ namespace network {
 
         template<typename MutableBufferSequence>
         awaitable<std::size_t> read(const MutableBufferSequence& buffers) {
-            co_return socket_.async_read_some(buffers, boost::asio::use_awaitable);
+            std::size_t len = co_await socket_.async_read_some(buffers, boost::asio::use_awaitable);
+            co_return len;
         }
 
         template<typename ConstBufferSequence>
         awaitable<void> write(const ConstBufferSequence& buffers) {
-            socket_.async_write_some(buffers, boost::asio::use_awaitable);
+            co_await socket_.async_write_some(buffers, boost::asio::use_awaitable);
         }
         
     private:

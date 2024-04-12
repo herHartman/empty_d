@@ -7,18 +7,17 @@
 
 #include <unordered_map>
 #include <string>
+#include "../../web/http_headers.h"
 
 namespace http {
     class http_response {
     public:
-
+        std::string format_headers() const { return headers_.format_headers(); }
     private:
-        std::unordered_map<std::string, std::string> headers;
+        http::web::http_headers headers_;
         int status;
         std::string body;
         void prepare_headers();
-
-
     };
 }
 

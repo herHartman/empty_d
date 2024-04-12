@@ -24,7 +24,9 @@ public:
         network::transport::transport_p transport,
         const std::shared_ptr<http::http_request_handler>& request_handler
     )
-    : transport_(std::move(transport)), request_handler_(request_handler) {}
+    : transport_(std::move(transport)), request_handler_(request_handler) {
+        http_writer_ = std::make_unique<http::http_writer>(transport_);
+    }
 
     boost::asio::awaitable<void> handle() {
         try {
@@ -32,11 +34,11 @@ public:
                 char data[1024];
                 memset(data, 0, 1024);
                 auto buffer = boost::asio::buffer(data);
-                std::size_t data_len = co_await socket_.async_read_some(buffer, boost::asio::use_awaitable);
-                socket_.async_write_some()
+                std::size_t data_len = co_await transport_->read(buffer);
                 request_parser_.parse(data, data_len, raw_request_message_);
                 if (request_parser_.is_complete()) {
-                    co_await request_handler_->handle_request(raw_request_message_);
+                    http::http_response response = co_await request_handler_->handle_request(raw_request_message_);
+                    co_await transport_->write(boost::asio::buffer(response.format_headers() + "\r\n"));
                 }
             }
         } catch (std::exception& e) {
@@ -58,7 +60,7 @@ private:
     http::http_request_parser request_parser_;
     http::raw_request_message raw_request_message_;
     std::shared_ptr<http::http_request_handler> request_handler_;
-    tcp::socket socket_;
+    std::unique_ptr<http::http_writer> http_writer_ = nullptr;
 };
 
 

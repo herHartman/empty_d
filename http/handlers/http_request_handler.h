@@ -7,6 +7,7 @@
 
 #include "../web/router/uri_dispatcher.h"
 #include "../../core/boost_asio_types.h"
+#include "../protocol/http_writer.h"
 #include <memory>
 #include <boost/asio.hpp>
 #include <utility>
