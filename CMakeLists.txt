@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.27)
-project(test)
+project(empty_d)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(test main.cpp
+add_executable(empty_d main.cpp
         http/protocol/response/http_response.h
         http/web/web_application.h
         http/web/router/resource_route.h
