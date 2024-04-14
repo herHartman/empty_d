@@ -29,24 +29,28 @@ public:
     }
 
     boost::asio::awaitable<void> handle() {
+        std::cout << "spawn coroutine\n";
         try {
             while (transport_->is_open()) {
                 char data[1024];
                 memset(data, 0, 1024);
                 auto buffer = boost::asio::buffer(data);
                 std::size_t data_len = co_await transport_->read(buffer);
-                request_parser_.parse(data, data_len, raw_request_message_);
-                if (request_parser_.is_complete()) {
+                std::size_t last_message_index = request_parser_.parse_message(data, data_len, raw_request_message_);
+                if (request_parser_.is_parse_message_complete()) {
+                    co_spawn(transport_.)
                     http::http_response response = co_await request_handler_->handle_request(raw_request_message_);
                     std::string status_line = "HTTP/1.1 200 HTTP_OK\r\n";
+                    std::cout << "test\n";
                     co_await transport_->write(boost::asio::buffer(status_line + response.format_headers()));
                     transport_->close();
-                }
+                } else if (request_parser_.is_parse_message_complete())
             }
         } catch (std::exception& e) {
             std::printf("echo Exception: %s\n", e.what());
         }
     }
+
 
     void connection_made() {
 
@@ -63,6 +67,12 @@ private:
     http::raw_request_message raw_request_message_;
     std::shared_ptr<http::http_request_handler> request_handler_;
     std::unique_ptr<http::http_writer> http_writer_ = nullptr;
+
+    awaitable<http::http_response> handle_request(const http::raw_request_message& message) {
+        auto response = co_await request_handler_->handle_request(raw_request_message_);
+        co_return response;
+    }
+
 };
 
 

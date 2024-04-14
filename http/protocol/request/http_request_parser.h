@@ -25,7 +25,8 @@ namespace http {
         PARSE_HTTP_VERSION,
         PARSE_HEADERS,
         PARSE_COMPLETE,
-        PARSE_HEADERS_ALMOST_DONE
+        PARSE_HEADERS_ALMOST_DONE,
+        PARSE_PAYLOAD
     };
 
     static std::unordered_map<std::string_view, http_methods> http_methods_map = {
@@ -99,7 +100,11 @@ namespace http {
 
     class http_request_parser {
     public:
-        void parse(const char* data_, const std::size_t len, raw_request_message& request_message) {
+        [[nodiscard]] std::size_t parse_message(
+            const char* data_,
+            const std::size_t len,
+            raw_request_message& request_message
+        ) {
             std::string_view data(data_);
             std::size_t current_substr_start_pos = 0;
 
@@ -136,20 +141,34 @@ namespace http {
                         current_state_ = request_state::PARSE_HEADERS_ALMOST_DONE;
                         break;
                     case request_state::PARSE_COMPLETE:
-                        return;
+                        return 0;
                     case request_state::PARSE_HEADERS_ALMOST_DONE:
-                        current_state_ = request_state::PARSE_COMPLETE;
+                        // current_state_ = request_state::PARSE_COMPLETE;
+                        return i;
+                    case request_state::PARSE_PAYLOAD:
                         break;
                 }
             }
+        }
+
+        [[nodiscard]] std::size_t parse_body(
+            const char* data_,
+            const std::size_t len,
+            std::shared_ptr<>
+        ) {
+
         }
 
         [[nodiscard]] request_state getState() const {
             return current_state_;
         }
 
-        [[nodiscard]] bool is_complete() const {
-            return current_state_ == request_state::PARSE_COMPLETE;
+        [[nodiscard]] bool is_parse_message_complete() const {
+            return current_state_ == request_state::PARSE_HEADERS_ALMOST_DONE;
+        }
+
+        [[nodiscard]] bool is_parse_payload() const {
+            return current_state_ == request_state::PARSE_HEADERS_ALMOST_DONE
         }
 
     private:

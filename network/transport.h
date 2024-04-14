@@ -4,11 +4,14 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
+#include <boost/asio/experimental/channel.hpp>
 #include <memory>
 #include <utility>
 
 using boost::asio::awaitable;
 using boost::asio::ip::tcp;
+using boost::asio::experimental::channel;
+using boost::asio::deferred;
 
 
 namespace network {
@@ -30,7 +33,11 @@ namespace network {
             co_await socket_.async_write_some(buffers, boost::asio::use_awaitable);
         }
 
-        bool is_open() const {
+        [[nodiscard]] auto get_executor() {
+            return socket_.get_executor();
+        }
+
+        [[nodiscard]] bool is_open() const {
             socket_.is_open();
         }
 

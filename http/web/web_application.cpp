@@ -16,6 +16,7 @@ awaitable<void> http::web::web_application::handle_request(const http::raw_reque
     std::optional<resource_route> route = router_->resolve(request_message);
     if (route) {
         handler_t handler = route.value().get_handler();
+
         co_await handler(request_message);
     }
     co_return;

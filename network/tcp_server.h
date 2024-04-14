@@ -41,18 +41,23 @@ namespace network {
 
         boost::asio::awaitable<void> start() {
             for (;;) {
-                tcp::socket client_socket = co_await acceptor_.async_accept(boost::asio::use_awaitable);
-                auto protocol = protocol_factory_.create_protocol(std::make_shared<transport>(std::move(client_socket)));
-                co_await protocol.handle();
+                connections_.push_back(protocol_factory_.create_protocol(
+                    std::make_shared<transport>(co_await acceptor_.async_accept(boost::asio::use_awaitable))
+                ));
+                co_spawn(acceptor_.get_executor(), connections_.back().handle(), detached);
             }
+        }
+
+        void shutdown() {
+            acceptor_.close();
         }
 
     private:
         tcp::acceptor acceptor_;
         http_protocol_factory protocol_factory_;
+        std::vector<base_protocol> connections_;
     };
 }
-
 
 
 #endif // SIMPLE_HTTP_SERVER_TCP_SERVER_H
