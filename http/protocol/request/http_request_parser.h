@@ -8,9 +8,11 @@
 #include <string>
 #include <bits/stdc++.h>
 #include <string_view>
+#include <utility>
 #include "raw_request_message.h"
 #include "../http_methods.h"
 #include "raw_request_message.h"
+#include "../http_body_stream_reader.h"
 
 constexpr static char HEADER_SEPARATOR = ':';
 constexpr static char WHITESPACE = ' ';
@@ -25,8 +27,7 @@ namespace http {
         PARSE_HTTP_VERSION,
         PARSE_HEADERS,
         PARSE_COMPLETE,
-        PARSE_HEADERS_ALMOST_DONE,
-        PARSE_PAYLOAD
+        PARSE_HEADERS_ALMOST_DONE
     };
 
     static std::unordered_map<std::string_view, http_methods> http_methods_map = {
@@ -96,10 +97,15 @@ namespace http {
     private:
         parse_header_state current_state_;
         std::string_view current_header_name_;
+
     };
 
     class http_request_parser {
     public:
+
+        explicit http_request_parser()
+         :  headers_parser_() {}
+
         [[nodiscard]] std::size_t parse_message(
             const char* data_,
             const std::size_t len,
@@ -145,21 +151,15 @@ namespace http {
                     case request_state::PARSE_HEADERS_ALMOST_DONE:
                         // current_state_ = request_state::PARSE_COMPLETE;
                         return i;
-                    case request_state::PARSE_PAYLOAD:
-                        break;
                 }
             }
         }
 
-        [[nodiscard]] std::size_t parse_body(
-            const char* data_,
-            const std::size_t len,
-            std::shared_ptr<>
-        ) {
+        void parse_body(const char* data, const std::size_t len, raw_request_message& request_message) {
 
         }
 
-        [[nodiscard]] request_state getState() const {
+        [[nodiscard]] request_state get_state() const {
             return current_state_;
         }
 
@@ -167,13 +167,14 @@ namespace http {
             return current_state_ == request_state::PARSE_HEADERS_ALMOST_DONE;
         }
 
-        [[nodiscard]] bool is_parse_payload() const {
-            return current_state_ == request_state::PARSE_HEADERS_ALMOST_DONE
+        void set_payload(std::shared_ptr<http::http_body_stream_reader> payload) {
+            payload_ = std::move(payload);
         }
 
     private:
         request_state current_state_ = request_state::PARSE_METHOD;
         http_headers_parser headers_parser_;
+        std::shared_ptr<http::http_body_stream_reader> payload_ = nullptr;
     };
 }
 

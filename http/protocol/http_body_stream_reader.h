@@ -22,11 +22,17 @@ namespace http {
     public:
         typedef std::shared_ptr<channel<void(boost::system::error_code, bool)>> read_lock_channel_p;
 
-        explicit http_body_stream_reader(std::shared_ptr<channel<void(boost::system::error_code, bool)>> read_lock)
-                : read_lock_(std::move(read_lock)) {}
+
+        explicit http_body_stream_reader(
+            read_lock_channel_p read_lock,
+            std::shared_ptr<boost::asio::streambuf> stream_buffer
+        ) : read_lock_(std::move(read_lock)), stream_buffer_(std::move(stream_buffer)) {}
+
         awaitable<std::string> text();
+        
     private:
         read_lock_channel_p read_lock_;
+        std::shared_ptr<boost::asio::streambuf> stream_buffer_;
     };
 }
 

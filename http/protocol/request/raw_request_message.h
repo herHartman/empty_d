@@ -7,6 +7,7 @@
 
 #include <string>
 #include <unordered_map>
+#include  <charconv>
 #include "../http_methods.h"
 
 
@@ -20,6 +21,23 @@ namespace http {
         bool upgrade;
         bool chunked;
         std::string url;
+
+        bool has_body() const {
+            if (headers.contains("Content-Length")) {
+                int content_length;
+                std::string_view content_length_str = headers.at("Content-Length");
+                auto result = std::from_chars(
+                    content_length_str.data(),
+                    content_length_str.data() + content_length_str.size(),
+                    content_length
+                );
+                if (result.ec == std::errc::invalid_argument) {
+                    throw std::exception();
+                }
+                return content_length > 0;
+            }
+        }
+
     };
 }
 

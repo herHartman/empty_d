@@ -26,7 +26,11 @@ public:
         : request_handler_(request_handler) {}
 
     base_protocol create_protocol(network::transport::transport_p transport) {
-        return base_protocol(std::move(transport), request_handler_);
+        auto ex = transport->get_executor();
+        return base_protocol(
+            std::move(transport), request_handler_,
+            std::make_shared<channel<void(boost::system::error_code, bool)>>(ex)
+        );
     }
 private:
     std::shared_ptr<http::http_request_handler> request_handler_;
@@ -46,6 +50,7 @@ namespace network {
                 ));
                 co_spawn(acceptor_.get_executor(), connections_.back().handle(), detached);
             }
+            channel<void(boost::system::error_code, bool)> test = channel<void(boost::system::error_code, bool)>();
         }
 
         void shutdown() {
