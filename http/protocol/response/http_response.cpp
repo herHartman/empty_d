@@ -15,3 +15,5 @@ void http::http_response::set_cookie(const std::string &name, const std::string 
 std::string http::http_response::get_cookie() const {
     return std::string();
 }
+
+
