@@ -32,4 +32,6 @@ add_executable(empty_d main.cpp
         http/protocol/http_body_stream_reader.h
         http/protocol/request/http_request_handler.h
         http/web/media_type.h
+        io/serializable/json_serializable.h
+        core/strings/string_literal.h
 )

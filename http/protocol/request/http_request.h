@@ -12,7 +12,8 @@
 namespace http {
     class http_request {
     public:
-        explicit http_request(http_body_stream_reader stream_reader) : stream_reader_(std::move(stream_reader)) {}
+        explicit http_request(std::shared_ptr<http_body_stream_reader> stream_reader)
+            : stream_reader_(std::move(stream_reader)) {}
     private:
         std::string host_;
         std::string url_;
@@ -20,7 +21,7 @@ namespace http {
         std::size_t content_length_;
         std::string content_type_;
 
-        http_body_stream_reader stream_reader_;
+        std::shared_ptr<http_body_stream_reader> stream_reader_;
     };
 }
 

@@ -19,14 +19,12 @@ namespace http {
     class http_request_handler {
     public:
         explicit http_request_handler(
-            const std::shared_ptr<http::web::uri_dispatcher>& uri_dispatcher,
-            http_body_stream_reader body_stream_reader
-        ) : uri_dispatcher_(uri_dispatcher), body_stream_reader_(std::move(body_stream_reader)) {}
+            const std::shared_ptr<http::web::uri_dispatcher>& uri_dispatcher
+        ) : uri_dispatcher_(uri_dispatcher) {}
 
         awaitable<http_response> handle_request(const raw_request_message& request_message);
     private:
         std::shared_ptr<http::web::uri_dispatcher> uri_dispatcher_;
-        http::http_body_stream_reader body_stream_reader_;
     };
 
 } // http

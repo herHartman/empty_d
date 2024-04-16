@@ -23,16 +23,14 @@ public:
 
     explicit base_protocol(
         network::transport::transport_p transport,
-        const std::shared_ptr<http::http_request_handler>& request_handler,
-        http::http_body_stream_reader::read_lock_channel_p read_lock_channel
+        const std::shared_ptr<http::http_request_handler>& request_handler
     )
     :   transport_(std::move(transport)), request_handler_(request_handler),
-        request_parser_(std::move(read_lock_channel))  {
+        request_parser_()  {
         http_writer_ = std::make_unique<http::http_writer>(transport_);
     }
 
     boost::asio::awaitable<void> handle() {
-        std::cout << "spawn coroutine\n";
         try {
             while (transport_->is_open()) {
                 char data[1024];
@@ -42,22 +40,19 @@ public:
                 if (!request_parser_.is_parse_message_complete()) {
                     std::size_t last_message_index = request_parser_.parse_message(data, data_len, raw_request_message_);
                     if (request_parser_.is_parse_message_complete()) {
-                        if (raw_request_message_.has_body()) {
-                            stream_buf_ = std::make_shared<boost::asio::streambuf>();
-                        }
 
-                        http::http_body_stream_reader stream_reader(
-                            request_parser_.get_read_lock_channel(),
-                            stream_buf_
+                        auto stream_reader = std::make_shared<http::http_body_stream_reader>(
+                            std::make_shared<http::http_body_stream_reader::read_lock_channel>(
+                                transport_->get_executor()
+                            )
                         );
 
                         http::http_request request(stream_reader);
-
-                        co_spawn(transport_->get_executor(), handle_request(raw_request_message_), detached);
+                        request_parser_.set_payload(stream_reader);
+                        co_spawn(transport_->get_executor(), handle_request(raw_request_message_, stream_reader), detached);
                         if (last_message_index < data_len) {
                             request_parser_.parse_body(&data[last_message_index], data_len, raw_request_message_);
                         }
-
                     }
                 } else {
                     request_parser_.parse_body(data, data_len, raw_request_message_);
@@ -86,12 +81,19 @@ private:
     std::shared_ptr<http::http_request_handler> request_handler_;
 
     std::unique_ptr<http::http_writer> http_writer_ = nullptr;
-    std::shared_ptr<boost::asio::streambuf> stream_buf_ = nullptr;
 
-    awaitable<void> handle_request(const http::raw_request_message& message) {
+    awaitable<void> handle_request(
+        const http::raw_request_message& message,
+        std::shared_ptr<http::http_body_stream_reader> stream_reader
+    ) {
         auto response = co_await request_handler_->handle_request(message);
         std::string status_line = "HTTP/1.1 200 HTTP_OK\r\n";
         co_await transport_->write(boost::asio::buffer(status_line + response.format_headers()));
+
+        while (!stream_reader->is_eof()) {
+            co_await stream_reader->read_any();
+        }
+
         transport_->close();
         co_return;
     }

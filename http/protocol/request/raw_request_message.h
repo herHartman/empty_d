@@ -22,22 +22,25 @@ namespace http {
         bool chunked;
         std::string url;
 
-        bool has_body() const {
+        std::size_t get_content_length() const {
+            int content_length = 0;
             if (headers.contains("Content-Length")) {
-                int content_length;
                 std::string_view content_length_str = headers.at("Content-Length");
                 auto result = std::from_chars(
-                    content_length_str.data(),
-                    content_length_str.data() + content_length_str.size(),
-                    content_length
+                        content_length_str.data(),
+                        content_length_str.data() + content_length_str.size(),
+                        content_length
                 );
                 if (result.ec == std::errc::invalid_argument) {
                     throw std::exception();
                 }
-                return content_length > 0;
             }
+            return content_length;
         }
 
+        bool has_body() const {
+            return get_content_length() > 0;
+        }
     };
 }
 

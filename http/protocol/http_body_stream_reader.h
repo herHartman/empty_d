@@ -11,6 +11,8 @@
 #include <memory>
 #include <utility>
 #include <string>
+#include <sstream>
+
 
 using boost::asio::awaitable;
 using boost::asio::ip::tcp;
@@ -20,19 +22,24 @@ using boost::asio::deferred;
 namespace http {
     class http_body_stream_reader {
     public:
-        typedef std::shared_ptr<channel<void(boost::system::error_code, bool)>> read_lock_channel_p;
+        typedef channel<void(boost::system::error_code)> read_lock_channel;
+        typedef std::shared_ptr<read_lock_channel> read_lock_channel_p;
 
-
-        explicit http_body_stream_reader(
-            read_lock_channel_p read_lock,
-            std::shared_ptr<boost::asio::streambuf> stream_buffer
-        ) : read_lock_(std::move(read_lock)), stream_buffer_(std::move(stream_buffer)) {}
+        explicit http_body_stream_reader(read_lock_channel_p channel) : read_lock_(std::move(channel)) {}
 
         awaitable<std::string> text();
-        
+        void write(const char* data);
+        awaitable<char*> read_any();
+
+        [[nodiscard]] bool get_eof() const { return eof_; }
+        void set_eof();
+
+        bool is_eof() const  { return eof_; }
+
     private:
         read_lock_channel_p read_lock_;
-        std::shared_ptr<boost::asio::streambuf> stream_buffer_;
+        bool eof_ = false;
+        std::stringstream string_buffer_;
     };
 }
 

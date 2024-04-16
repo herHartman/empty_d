@@ -156,7 +156,9 @@ namespace http {
         }
 
         void parse_body(const char* data, const std::size_t len, raw_request_message& request_message) {
-
+            if (payload_) {
+                payload_->write(data);
+            }
         }
 
         [[nodiscard]] request_state get_state() const {

@@ -29,6 +29,12 @@ namespace http {
         std::string body_;
         std::size_t content_length_;
     };
+
+    template<typename T>
+    http_response make_json_response(T object) {
+
+    }
+
 }
 
 #endif //TEST_HTTP_RESPONSE_H
