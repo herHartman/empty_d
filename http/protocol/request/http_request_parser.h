@@ -69,14 +69,14 @@ namespace http {
                                 current_position - current_substr_pos
                             );
                             current_state_ = parse_header_state::PARSE_VALUE;
-                            current_substr_pos = current_position;
+                            current_substr_pos = current_position + 1;
                         } else if (data[current_position] == CR || data[current_position] == LF) {
                             request_state = request_state::PARSE_HEADERS_ALMOST_DONE;
                             return;
                         }
                         break;
                     case parse_header_state::PARSE_VALUE:
-                        if (data[current_position] == WHITESPACE) {
+                        if (data[current_substr_pos] == WHITESPACE) {
                             ++current_substr_pos;
                         } else if (data[current_position] == CR) {
                             const std::string_view header_value = data.substr(
@@ -117,7 +117,7 @@ namespace http {
             for (int i = 0; i < len; ++i) {
                 switch (current_state_) {
                     case request_state::PARSE_METHOD:
-                        if (data[i] == WHITESPACE) {
+                        if (isspace(data[i])) {
                             current_state_ = request_state::PARSE_PATH;
                             request_message.method = http_methods_map[
                                 data.substr(current_substr_start_pos, i - current_substr_start_pos)
@@ -126,7 +126,7 @@ namespace http {
                         }
                         break;
                     case request_state::PARSE_PATH:
-                        if (data[i] == WHITESPACE) {
+                        if (isspace(data[i])) {
                             request_message.path = data.substr(current_substr_start_pos, i - current_substr_start_pos);
                             current_state_ = request_state::PARSE_HTTP_VERSION;
                             current_substr_start_pos = i + 1;
@@ -155,9 +155,13 @@ namespace http {
             }
         }
 
-        void parse_body(const char* data, const std::size_t len, raw_request_message& request_message) {
+        awaitable<void> parse_body(const char* data, const std::size_t len, raw_request_message& request_message) {
             if (payload_) {
-                payload_->write(data);
+                current_body_length_ += len;
+                co_await payload_->write(data);
+                if (current_body_length_ == request_message.get_content_length()) {
+                    payload_->set_eof();
+                }
             }
         }
 
@@ -177,6 +181,7 @@ namespace http {
         request_state current_state_ = request_state::PARSE_METHOD;
         http_headers_parser headers_parser_;
         std::shared_ptr<http::http_body_stream_reader> payload_ = nullptr;
+        std::size_t current_body_length_ = 0;
     };
 }
 

@@ -11,7 +11,7 @@ using boost::asio::ip::tcp;
 namespace this_coro = boost::asio::this_coro;
 
 awaitable<http::http_response> handler(const http::raw_request_message& request_message) {
-    co_return http::http_response{};
+    co_return http::http_response({}, static_cast<http::web::http_status>(200), "", 1);
 }
 
 
@@ -21,9 +21,10 @@ int main() {
     signals.async_wait([&](auto, auto) { io_context.stop(); });
 
     http::web::web_application application = http::web::web_application(io_context, 8080);
-    application.add_route("/auth/guest", &handler, http::http_methods::HTTP_GET);
+    application.add_route("/auth/guest", &handler, http::http_methods::HTTP_POST);
     
     co_spawn(io_context, application.start(), detached);
+
     io_context.run();
 
     std::cout << "Hello, World!" << std::endl;

@@ -51,11 +51,11 @@ public:
                         request_parser_.set_payload(stream_reader);
                         co_spawn(transport_->get_executor(), handle_request(raw_request_message_, stream_reader), detached);
                         if (last_message_index < data_len) {
-                            request_parser_.parse_body(&data[last_message_index], data_len, raw_request_message_);
+                            co_await request_parser_.parse_body(&data[last_message_index], data_len, raw_request_message_);
                         }
                     }
                 } else {
-                    request_parser_.parse_body(data, data_len, raw_request_message_);
+                    co_await request_parser_.parse_body(data, data_len, raw_request_message_);
                 }
             }
         } catch (std::exception& e) {

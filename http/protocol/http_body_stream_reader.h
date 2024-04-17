@@ -28,7 +28,7 @@ namespace http {
         explicit http_body_stream_reader(read_lock_channel_p channel) : read_lock_(std::move(channel)) {}
 
         awaitable<std::string> text();
-        void write(const char* data);
+        awaitable<void> write(const char* data);
         awaitable<char*> read_any();
 
         [[nodiscard]] bool get_eof() const { return eof_; }

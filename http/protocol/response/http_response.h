@@ -55,6 +55,22 @@ namespace http {
         return http_response{headers, status, response_body, response_body.size()};
     }
 
+    class test_serializer;
+
+    struct Test : public json_serializable<Test, test_serializer> {
+
+    };
+
+    class test_serializer {
+    public:
+        [[nodiscard]] std::string serialize(Test object) const {
+            return {};
+        }
+
+        void test() {
+            auto response = make_json_response(Test{}, http::web::http_status::HTTP_ACCEPTED);
+        }
+    };
 }
 
 #endif //TEST_HTTP_RESPONSE_H

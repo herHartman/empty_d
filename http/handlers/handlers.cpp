@@ -7,5 +7,4 @@
 
 http::http_response handle_request(const http::raw_request_message& request_message) {
     std::cout << request_message.path;
-    return {};
 }
