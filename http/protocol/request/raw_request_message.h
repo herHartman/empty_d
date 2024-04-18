@@ -16,7 +16,7 @@ namespace http {
         http_methods method;
         std::string path;
         std::string version;
-        std::unordered_map<std::string_view, std::string_view> headers;
+        std::unordered_map<std::string, std::string> headers;
         std::string compression;
         bool upgrade;
         bool chunked;

@@ -22,7 +22,7 @@ using boost::asio::deferred;
 namespace http {
     class http_body_stream_reader {
     public:
-        typedef channel<void(boost::system::error_code)> read_lock_channel;
+        typedef channel<void(boost::system::error_code, std::size_t)> read_lock_channel;
         typedef std::shared_ptr<read_lock_channel> read_lock_channel_p;
 
         explicit http_body_stream_reader(read_lock_channel_p channel) : read_lock_(std::move(channel)) {}

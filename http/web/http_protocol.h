@@ -33,17 +33,16 @@ public:
     boost::asio::awaitable<void> handle() {
         try {
             while (transport_->is_open()) {
-                char data[1024];
-                memset(data, 0, 1024);
-                auto buffer = boost::asio::buffer(data);
-                std::size_t data_len = co_await transport_->read(buffer);
+                std::size_t data_len = co_await transport_->read(boost::asio::buffer(buffer_));
                 if (!request_parser_.is_parse_message_complete()) {
-                    std::size_t last_message_index = request_parser_.parse_message(data, data_len, raw_request_message_);
+                    std::size_t last_message_index = request_parser_.parse_message(
+                        buffer_.data(), data_len, raw_request_message_
+                    );
                     if (request_parser_.is_parse_message_complete()) {
 
                         auto stream_reader = std::make_shared<http::http_body_stream_reader>(
                             std::make_shared<http::http_body_stream_reader::read_lock_channel>(
-                                transport_->get_executor()
+                                transport_->get_executor(), 1
                             )
                         );
 
@@ -51,11 +50,11 @@ public:
                         request_parser_.set_payload(stream_reader);
                         co_spawn(transport_->get_executor(), handle_request(raw_request_message_, stream_reader), detached);
                         if (last_message_index < data_len) {
-                            co_await request_parser_.parse_body(&data[last_message_index], data_len, raw_request_message_);
+                            co_await request_parser_.parse_body(&buffer_[last_message_index + 1], data_len - last_message_index - 1, raw_request_message_);
                         }
                     }
                 } else {
-                    co_await request_parser_.parse_body(data, data_len, raw_request_message_);
+                    co_await request_parser_.parse_body(buffer_.data(), data_len, raw_request_message_);
                 }
             }
         } catch (std::exception& e) {
@@ -79,8 +78,9 @@ private:
     http::http_request_parser request_parser_;
     http::raw_request_message raw_request_message_;
     std::shared_ptr<http::http_request_handler> request_handler_;
-
     std::unique_ptr<http::http_writer> http_writer_ = nullptr;
+
+    std::array<char, 8192> buffer_;
 
     awaitable<void> handle_request(
         const http::raw_request_message& message,
@@ -94,8 +94,8 @@ private:
             co_await stream_reader->read_any();
         }
 
-        transport_->close();
-        co_return;
+         transport_->close();
+         co_return;
     }
 
 };

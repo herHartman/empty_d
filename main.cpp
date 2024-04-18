@@ -22,7 +22,7 @@ int main() {
 
     http::web::web_application application = http::web::web_application(io_context, 8080);
     application.add_route("/auth/guest", &handler, http::http_methods::HTTP_POST);
-    
+
     co_spawn(io_context, application.start(), detached);
 
     io_context.run();

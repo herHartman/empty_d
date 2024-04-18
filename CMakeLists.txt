@@ -35,4 +35,5 @@ add_executable(empty_d main.cpp
         io/serializable/json_serializable.h
         core/strings/string_literal.h
         core/strings/ichar_traits.h
+        compile_time_containers.h
 )
