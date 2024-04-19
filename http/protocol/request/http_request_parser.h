@@ -158,7 +158,6 @@ namespace http {
                 current_body_length_ += len;
                 co_await payload_->write(data);
                 if (current_body_length_ == request_message.get_content_length()) {
-                    const auto content_length = request_message.get_content_length();
                     payload_->set_eof();
                 }
             }

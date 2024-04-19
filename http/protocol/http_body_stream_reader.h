@@ -29,7 +29,7 @@ namespace http {
 
         awaitable<std::string> text();
         awaitable<void> write(const char* data);
-        awaitable<char*> read_any();
+        awaitable<std::vector<char>> read_any();
 
         [[nodiscard]] bool get_eof() const { return eof_; }
         void set_eof();

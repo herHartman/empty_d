@@ -18,4 +18,7 @@ public:
     typedef class_serializer serializer;
 };
 
+template<typename T>
+concept is_serializable = std::is_base_of_v<json_serializable<T, typename T::serializer>, T>;
+
 #endif //EMPTY_D_JSON_SERIALIZABLE_H

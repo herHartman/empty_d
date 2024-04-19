@@ -9,6 +9,7 @@
 #include "../../web/http_headers.h"
 #include "../../web/http_status.h"
 #include "../../../io/serializable/json_serializable.h"
+#include "../http_body_stream_reader.h"
 #include <unordered_map>
 #include <string>
 #include <type_traits>
@@ -20,8 +21,10 @@ namespace http {
         explicit http_response(
             http::web::http_headers headers,
             http::web::http_status status,
-            std::string body, std::size_t content_length
-        ) : headers_(std::move(headers)), status_(status), body_(std::move(body)), content_length_(content_length) {}
+            std::string body,
+            std::size_t content_length
+        ) : headers_(std::move(headers)), status_(status), body_(std::move(body)),
+            content_length_(content_length) {}
 
         std::string format_headers() const { return headers_.format_headers(); }
         void prepare_headers();
@@ -39,9 +42,6 @@ namespace http {
         std::size_t content_length_;
     };
 
-
-    template<typename T>
-    concept is_serializable = std::is_base_of_v<json_serializable<T, typename T::serializer>, T>;
 
     template<is_serializable T>
     http_response make_json_response(T object, http::web::http_status status) {
@@ -67,9 +67,6 @@ namespace http {
             return {};
         }
 
-        void test() {
-            auto response = make_json_response(Test{}, http::web::http_status::HTTP_ACCEPTED);
-        }
     };
 }
 

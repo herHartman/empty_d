@@ -22,15 +22,15 @@ namespace http {
         read_lock_->try_send(boost::system::error_code{}, 0);
     }
 
-    awaitable<char *> http_body_stream_reader::read_any() {
+    awaitable<std::vector<char>> http_body_stream_reader::read_any() {
         while ((string_buffer_.peek() == -1) && !eof_) {
             string_buffer_.clear();
             std::size_t bytes_available = co_await read_lock_->async_receive(boost::asio::use_awaitable);
         }
-        auto test = string_buffer_.peek();
         std::string result;
         string_buffer_ >> result;
-        char* res = const_cast<char *>(result.c_str());
+        std::vector<char> res;
+        res.reserve(result.size());
         co_return res;
     }
 }

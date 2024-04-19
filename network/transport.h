@@ -43,6 +43,7 @@ namespace network {
 
         void close() {
             socket_.shutdown(tcp::socket::shutdown_send);
+            socket_.shutdown(tcp::socket::shutdown_receive);
             socket_.close();
         }
 

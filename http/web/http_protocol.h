@@ -88,6 +88,7 @@ private:
     ) {
         auto response = co_await request_handler_->handle_request(message);
         std::string status_line = "HTTP/1.1 200 HTTP_OK\r\n";
+
         co_await transport_->write(boost::asio::buffer(status_line + response.format_headers()));
 
         while (!stream_reader->is_eof()) {
