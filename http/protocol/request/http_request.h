@@ -10,6 +10,7 @@
 #include "../../../core/boost_asio_types.h"
 #include "../http_body_stream_reader.h"
 #include "../../../io/serializable/json_serializable.h"
+#include "raw_request_message.h"
 
 using namespace boost;
 
@@ -21,14 +22,20 @@ namespace http {
 
         template<is_serializable T>
         awaitable<T> read_body() {
-            const char* data = co_await read();
+            co_return typename T::serializer{}.deserialize(co_await read_json());
+        }
 
+        awaitable<json::value> read_json() {
+            const char* data = co_await read();
+            boost::system::error_code ec;
+            json::value json_value = json::parse(data, ec);
+            co_return json_value;
         }
 
         awaitable<const char*> read() {
             if (buffer_.empty()) {
                 while (true) {
-                    buffer_.reserve(content_length_);
+                    buffer_.reserve(get_content_length());
                     std::vector<char> chunk = co_await stream_reader_->read_any();
                     if (chunk.empty()) break;
                     buffer_.assign(chunk.begin(), chunk.end());
@@ -37,14 +44,23 @@ namespace http {
             co_return buffer_.data();
         }
 
+    [[nodiscard]] std::size_t get_content_length() {
+        if (!content_length_) {
+            content_length_ = request_message.get_content_length();
+        }
+        return content_length_.value();
+    }
+
     private:
+        std::optional<std::size_t> content_length_;
+        std::optional<std::string_view> content_type_;
+
         std::string host_;
         std::string url_;
         std::string version_;
-        std::size_t content_length_{};
-        std::string content_type_;
         std::shared_ptr<http_body_stream_reader> stream_reader_;
         std::vector<char> buffer_;
+        raw_request_message request_message;
     };
 }
 

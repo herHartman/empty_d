@@ -36,4 +36,7 @@ add_executable(empty_d main.cpp
         core/strings/string_literal.h
         core/strings/ichar_traits.h
         compile_time_containers.h
+        tests/serializers/cookie.h
+        tests/serializers/cookie_serializer.cpp
+        tests/serializers/cookie_serializer.h
 )

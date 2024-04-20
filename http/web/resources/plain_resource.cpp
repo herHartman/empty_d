@@ -10,7 +10,7 @@ namespace http::web {
         return path == path_;
     }
 
-    std::optional<resource_route> plain_resource::resolve(const http::raw_request_message &request_message) {
+    std::optional<resource_route> plain_resource::resolve(const http::http_request &request_message) {
         if (!match(request_message.path)) {
             return std::nullopt;
         }

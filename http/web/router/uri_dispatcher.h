@@ -8,6 +8,7 @@
 #include "../../protocol/request/raw_request_message.h"
 #include "../resources/abstract_resource.h"
 #include "resource_route.h"
+#include "../../protocol/response/http_response.h"
 #include "../../handlers/handlers.h"
 #include <vector>
 #include <memory>
@@ -16,7 +17,7 @@ namespace http::web {
 
     class uri_dispatcher {
     public:
-        std::optional<resource_route> resolve(const raw_request_message& request);
+        std::optional<resource_route> resolve(const http_response& request);
         void add_router(
             const std::string& path,
             const handler_t& handler,
