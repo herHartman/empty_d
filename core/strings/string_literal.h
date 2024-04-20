@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <algorithm>
 
-namespace core::utils {
+namespace empty_d::utils {
 
     template<std::size_t N>
     class string_literal {

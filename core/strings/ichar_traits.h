@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace core::strings {
+namespace empty_d::strings {
     template<class Char>
     struct ichar_traits : public std::char_traits<Char> {
         static bool eq(Char c1, Char c2) {

@@ -51,6 +51,21 @@ namespace http {
         return content_length_.value();
     }
 
+    [[nodiscard]] std::string get_path() {
+        if (!path_) {
+            path_ = request_message.path;
+        }
+        return path_.value();
+    }
+
+    [[nodiscard]] http::http_methods get_method() const {
+        return request_message.method;
+    }
+
+    [[nodiscard]] std::shared_ptr<http_body_stream_reader> get_stream_reader() const {
+        return stream_reader_;
+    }
+
     private:
         std::optional<std::size_t> content_length_;
         std::optional<std::string_view> content_type_;
@@ -60,6 +75,7 @@ namespace http {
         std::string version_;
         std::shared_ptr<http_body_stream_reader> stream_reader_;
         std::vector<char> buffer_;
+        std::optional<std::string> path_;
         raw_request_message request_message;
     };
 }

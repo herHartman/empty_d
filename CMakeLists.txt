@@ -3,6 +3,10 @@ project(empty_d)
 
 set(CMAKE_CXX_STANDARD 23)
 
+find_package(Boost)
+find_package(Boost REQUIRED COMPONENTS json)
+
+
 add_executable(empty_d main.cpp
         http/protocol/response/http_response.h
         http/web/web_application.h
@@ -40,3 +44,5 @@ add_executable(empty_d main.cpp
         tests/serializers/cookie_serializer.cpp
         tests/serializers/cookie_serializer.h
 )
+
+target_link_libraries(empty_d PRIVATE Boost::boost Boost::json)

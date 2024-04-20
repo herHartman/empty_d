@@ -10,13 +10,14 @@ namespace http::web {
         return path == path_;
     }
 
-    std::optional<resource_route> plain_resource::resolve(const http::http_request &request_message) {
-        if (!match(request_message.path)) {
+    std::optional<resource_route> plain_resource::resolve(http::http_request &request) {
+
+        if (!match(request.get_path())) {
             return std::nullopt;
         }
 
         for (auto & route : routes_) {
-            if (route.get_method() == request_message.method) {
+            if (route.get_method() == request.get_method()) {
                 return route;
             }
         }
