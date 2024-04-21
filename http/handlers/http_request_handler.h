@@ -7,6 +7,8 @@
 
 #include "../web/router/uri_dispatcher.h"
 #include "../../core/boost_asio_types.h"
+#include "../protocol/http_writer.h"
+#include "../protocol/http_body_stream_reader.h"
 #include <memory>
 #include <boost/asio.hpp>
 #include <utility>
@@ -16,10 +18,11 @@ namespace http {
 
     class http_request_handler {
     public:
-        explicit http_request_handler(const std::shared_ptr<http::web::uri_dispatcher>& uri_dispatcher)
-            : uri_dispatcher_(uri_dispatcher) {}
+        explicit http_request_handler(
+            const std::shared_ptr<http::web::uri_dispatcher>& uri_dispatcher
+        ) : uri_dispatcher_(uri_dispatcher) {}
 
-        awaitable<http_response> handle_request(const raw_request_message& request_message);
+        awaitable<http_response> handle_request(http_request& request);
     private:
         std::shared_ptr<http::web::uri_dispatcher> uri_dispatcher_;
     };

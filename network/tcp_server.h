@@ -16,6 +16,8 @@
 #include <vector>
 
 using boost::asio::ip::tcp;
+namespace this_coro = boost::asio::this_coro;
+using boost::asio::detached;
 
 
 class http_protocol_factory {
@@ -24,7 +26,9 @@ public:
         : request_handler_(request_handler) {}
 
     base_protocol create_protocol(network::transport::transport_p transport) {
-        return base_protocol(std::move(transport), request_handler_);
+        return base_protocol(
+            std::move(transport), request_handler_
+        );
     }
 private:
     std::shared_ptr<http::http_request_handler> request_handler_;
@@ -39,18 +43,23 @@ namespace network {
 
         boost::asio::awaitable<void> start() {
             for (;;) {
-                tcp::socket client_socket = co_await acceptor_.async_accept(boost::asio::use_awaitable);
-                auto protocol = protocol_factory_.create_protocol(std::make_shared<transport>(std::move(client_socket)));
-                co_await protocol.handle();
+                connections_.push_back(protocol_factory_.create_protocol(
+                    std::make_shared<transport>(co_await acceptor_.async_accept(boost::asio::use_awaitable))
+                ));
+                co_spawn(acceptor_.get_executor(), connections_.back().handle(), detached);
             }
+        }
+
+        void shutdown() {
+            acceptor_.close();
         }
 
     private:
         tcp::acceptor acceptor_;
         http_protocol_factory protocol_factory_;
+        std::vector<base_protocol> connections_;
     };
 }
-
 
 
 #endif // SIMPLE_HTTP_SERVER_TCP_SERVER_H

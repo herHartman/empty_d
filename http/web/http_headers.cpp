@@ -3,6 +3,7 @@
 //
 
 #include "http_headers.h"
+#include <sstream>
 
 namespace http::web {
 
@@ -44,5 +45,14 @@ namespace http::web {
 
     void http_headers::set_connection(const std::string &connection) {
 
+    }
+
+    std::string http_headers::format_headers() const {
+        std::stringstream buf;
+        for (const auto & header : headers_) {
+            buf << header.first << ": " << header.second << "\r\n";
+        }
+        buf << "\r\n";
+        return buf.str();
     }
 }

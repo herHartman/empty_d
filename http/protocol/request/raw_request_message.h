@@ -7,6 +7,7 @@
 
 #include <string>
 #include <unordered_map>
+#include  <charconv>
 #include "../http_methods.h"
 
 
@@ -15,11 +16,31 @@ namespace http {
         http_methods method;
         std::string path;
         std::string version;
-        std::unordered_map<std::string_view, std::string_view> headers;
+        std::unordered_map<std::string, std::string> headers;
         std::string compression;
         bool upgrade;
         bool chunked;
         std::string url;
+
+        std::size_t get_content_length() const {
+            int content_length = 0;
+            if (headers.contains("Content-Length")) {
+                std::string_view content_length_str = headers.at("Content-Length");
+                auto result = std::from_chars(
+                        content_length_str.data(),
+                        content_length_str.data() + content_length_str.size(),
+                        content_length
+                );
+                if (result.ec == std::errc::invalid_argument) {
+                    throw std::exception();
+                }
+            }
+            return content_length;
+        }
+
+        bool has_body() const {
+            return get_content_length() > 0;
+        }
     };
 }
 

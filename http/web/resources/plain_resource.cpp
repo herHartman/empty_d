@@ -7,16 +7,19 @@
 
 namespace http::web {
     bool plain_resource::match(const std::string &path) {
-        return path == path_;
+        return true;
     }
 
-    std::optional<resource_route> plain_resource::resolve(const http::raw_request_message &request_message) {
-        if (!match(request_message.path)) {
+    std::optional<resource_route> plain_resource::resolve(http::http_request &request) {
+
+        if (!match(request.get_path())) {
             return std::nullopt;
         }
 
         for (auto & route : routes_) {
-            if (route.get_method() == request_message.method) {
+            auto method1 = route.get_method();
+            auto method2 = request.get_method();
+            if (method1 == method2) {
                 return route;
             }
         }

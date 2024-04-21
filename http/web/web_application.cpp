@@ -12,11 +12,11 @@ void http::web::web_application::add_route(
     router_->add_router(path, handler, http_method);
 }
 
-awaitable<void> http::web::web_application::handle_request(const http::raw_request_message &request_message) {
-    std::optional<resource_route> route = router_->resolve(request_message);
+awaitable<void> http::web::web_application::handle_request(http::http_request &request) {
+    std::optional<resource_route> route = router_->resolve(request);
     if (route) {
         handler_t handler = route.value().get_handler();
-        co_await handler(request_message);
+        co_await handler(request);
     }
     co_return;
 }

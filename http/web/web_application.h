@@ -27,17 +27,17 @@ namespace http::web {
         : port_(port) {
             router_ = std::make_shared<uri_dispatcher>();
             request_handler_ = std::make_shared<http::http_request_handler>(router_);
-            server_ = std::make_unique<tcp_server>(io_context, port, http_protocol_factory(request_handler_));
+            server_ = std::make_unique<network::tcp_server>(io_context, port, http_protocol_factory(request_handler_));
         }
 
         void add_route(const std::string& path, const handler_t & handler, http_methods http_method);
-        awaitable<void> handle_request(const raw_request_message& request_message);
+        awaitable<void> handle_request(http::http_request &request);
         void add_middleware(const std::function<void(raw_request_message)>& middleware_handler);
         awaitable<void> start(int port = 8080);
     private:
        std::shared_ptr<uri_dispatcher> router_ = nullptr;
        std::vector<std::function<void(raw_request_message)>> middlewares_;
-       std::unique_ptr<tcp_server> server_ = nullptr;
+       std::unique_ptr<network::tcp_server> server_ = nullptr;
        std::shared_ptr<http::http_request_handler> request_handler_;
        int port_;
     };
