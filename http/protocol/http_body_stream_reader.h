@@ -25,21 +25,23 @@ namespace http {
         typedef channel<void(boost::system::error_code, std::size_t)> read_lock_channel;
         typedef std::shared_ptr<read_lock_channel> read_lock_channel_p;
 
-        explicit http_body_stream_reader(read_lock_channel_p channel) : read_lock_(std::move(channel)) {}
+        explicit http_body_stream_reader(read_lock_channel_p channel) : read_lock_(std::move(channel)) {
+            buffer_.reserve(4096);
+        }
 
         awaitable<std::string> text();
-        awaitable<void> write(const char* data);
+        awaitable<void> write(const char* data, std::size_t len);
         awaitable<std::vector<char>> read_any();
 
-        [[nodiscard]] bool get_eof() const { return eof_; }
         void set_eof();
 
-        bool is_eof() const  { return eof_; }
+        [[nodiscard]] bool is_eof() const  { return eof_; }
 
     private:
         read_lock_channel_p read_lock_;
         bool eof_ = false;
         std::stringstream string_buffer_;
+        std::vector<char> buffer_;
     };
 }
 

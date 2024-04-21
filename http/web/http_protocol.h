@@ -46,11 +46,11 @@ public:
                             )
                         );
 
-                        http::http_request request(stream_reader);
+                        http::http_request request(stream_reader, raw_request_message_);
                         request_parser_.set_payload(stream_reader);
                         co_spawn(transport_->get_executor(), handle_request(request), detached);
                         if (last_message_index < data_len) {
-                            co_await request_parser_.parse_body(&buffer_[last_message_index + 1], data_len - last_message_index - 1, raw_request_message_);
+                            co_await request_parser_.parse_body(&buffer_[last_message_index - 1], data_len - last_message_index + 1, raw_request_message_);
                         }
                     }
                 } else {

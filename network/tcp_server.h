@@ -26,7 +26,6 @@ public:
         : request_handler_(request_handler) {}
 
     base_protocol create_protocol(network::transport::transport_p transport) {
-        auto ex = transport->get_executor();
         return base_protocol(
             std::move(transport), request_handler_
         );

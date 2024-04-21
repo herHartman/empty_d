@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <cstring>
 #include "http_body_stream_reader.h"
 
 namespace http {
@@ -11,8 +12,11 @@ namespace http {
         co_return std::string();
     }
 
-    awaitable<void> http_body_stream_reader::write(const char* data) {
-        string_buffer_ << data;
+    awaitable<void> http_body_stream_reader::write(const char* data, std::size_t len) {
+        if (buffer_.capacity() < (buffer_.size() + len)) {
+            buffer_.reserve(2 * buffer_.capacity());
+        }
+        std::copy(data, data + len, std::back_inserter(buffer_));
         read_lock_->try_send(boost::system::error_code{}, 0);
         co_return;
     }
@@ -23,14 +27,11 @@ namespace http {
     }
 
     awaitable<std::vector<char>> http_body_stream_reader::read_any() {
-        while ((string_buffer_.peek() == -1) && !eof_) {
-            string_buffer_.clear();
-            std::size_t bytes_available = co_await read_lock_->async_receive(boost::asio::use_awaitable);
+        while (buffer_.empty() && !eof_) {
+            co_await read_lock_->async_receive(boost::asio::use_awaitable);
         }
-        std::string result;
-        string_buffer_ >> result;
-        std::vector<char> res;
-        res.reserve(result.size());
-        co_return res;
+        std::vector<char> result = std::move(buffer_);
+        buffer_.reserve(4096);
+        co_return std::move(result);
     }
 }

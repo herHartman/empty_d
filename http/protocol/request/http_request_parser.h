@@ -156,7 +156,7 @@ namespace http {
         awaitable<void> parse_body(const char* data, const std::size_t len, raw_request_message& request_message) {
             if (payload_) {
                 current_body_length_ += len;
-                co_await payload_->write(data);
+                co_await payload_->write(data, len);
                 if (current_body_length_ == request_message.get_content_length()) {
                     payload_->set_eof();
                 }

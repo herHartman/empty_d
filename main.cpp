@@ -18,6 +18,7 @@ using namespace boost;
 
 awaitable<http::http_response> handler(http::http_request& request_message) {
     cookie response = co_await request_message.read_body<cookie>();
+
     co_return http::http_response({}, static_cast<http::web::http_status>(200), "", 1);
 }
 

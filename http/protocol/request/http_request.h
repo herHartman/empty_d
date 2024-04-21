@@ -17,8 +17,11 @@ using namespace boost;
 namespace http {
     class http_request {
     public:
-        explicit http_request(std::shared_ptr<http_body_stream_reader> stream_reader)
-            : stream_reader_(std::move(stream_reader)) {}
+        explicit http_request(
+                std::shared_ptr<http_body_stream_reader> stream_reader,
+                raw_request_message request_message
+        )
+            : stream_reader_(std::move(stream_reader)), request_message_(std::move(request_message))  {}
 
         template<is_serializable T>
         awaitable<T> read_body() {
@@ -46,20 +49,20 @@ namespace http {
 
     [[nodiscard]] std::size_t get_content_length() {
         if (!content_length_) {
-            content_length_ = request_message.get_content_length();
+            content_length_ = request_message_.get_content_length();
         }
         return content_length_.value();
     }
 
     [[nodiscard]] std::string get_path() {
         if (!path_) {
-            path_ = request_message.path;
+            path_ = request_message_.path;
         }
         return path_.value();
     }
 
     [[nodiscard]] http::http_methods get_method() const {
-        return request_message.method;
+        return request_message_.method;
     }
 
     [[nodiscard]] std::shared_ptr<http_body_stream_reader> get_stream_reader() const {
@@ -76,7 +79,7 @@ namespace http {
         std::shared_ptr<http_body_stream_reader> stream_reader_;
         std::vector<char> buffer_;
         std::optional<std::string> path_;
-        raw_request_message request_message;
+        raw_request_message request_message_;
     };
 }
 

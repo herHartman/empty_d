@@ -54,20 +54,6 @@ namespace http {
         std::string response_body = typename T::serializer{}.serialize(object);
         return http_response{headers, status, response_body, response_body.size()};
     }
-
-    class test_serializer;
-
-    struct Test : public json_serializable<Test, test_serializer> {
-
-    };
-
-    class test_serializer {
-    public:
-        [[nodiscard]] std::string serialize(Test object) const {
-            return {};
-        }
-
-    };
 }
 
 #endif //TEST_HTTP_RESPONSE_H
