@@ -72,6 +72,8 @@
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 cmake-build-debug/
+build/
+compile_commands.json
 
 # JIRA plugin
 atlassian-ide-plugin.xml

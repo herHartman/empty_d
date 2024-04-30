@@ -1,3 +1,0 @@
-/home/chopk/home_repos/empty_d/build/CMakeFiles/empty_d.dir
-/home/chopk/home_repos/empty_d/build/CMakeFiles/edit_cache.dir
-/home/chopk/home_repos/empty_d/build/CMakeFiles/rebuild_cache.dir
