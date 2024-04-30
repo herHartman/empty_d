@@ -1,10 +1,8 @@
 #include "network/tcp_server.h"
 #include "http/web/web_application.h"
-#include "io/serializable/json_serializable.h"
 #include <boost/json.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <iostream>
-#include "tests/serializers/cookie.h"
 
 using boost::asio::awaitable;
 using boost::asio::co_spawn;
@@ -15,10 +13,7 @@ namespace this_coro = boost::asio::this_coro;
 
 using namespace boost;
 
-
 awaitable<http::http_response> handler(http::http_request& request_message) {
-    cookie response = co_await request_message.read_body<cookie>();
-
     co_return http::http_response({}, static_cast<http::web::http_status>(200), "", 1);
 }
 
