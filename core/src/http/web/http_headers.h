@@ -5,13 +5,17 @@
 #ifndef TEST_HTTP_HEADERS_H
 #define TEST_HTTP_HEADERS_H
 
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 #include <string>
 
 namespace http::web {
-    class http_headers {
+    typedef std::unordered_map<std::string_view, std::vector<std::string_view>> header_values; 
+
+    class headers {
     public:
-        class headers {
+        class basic_headers {
             inline static constexpr char accept[] = "Accept";
             inline static constexpr char accept_charset[] = "Accept-Charset";
             inline static char accept_encoding[] = "Accept-Encoding";
@@ -24,6 +28,10 @@ namespace http::web {
             inline static char cache_control[] = "Cache-Control";
             inline static char connection[] = "Connection";
         };
+
+
+    void set(std::string_view key, std::string_view value);
+    void set(std::string_view key, std::initializer_list<std::string_view> values);
 
     void set_basic_auth(const std::string& username, const std::string& password);
     void set_bearer_auth(const std::string& token);
@@ -45,7 +53,7 @@ namespace http::web {
     std::string format_headers() const;
 
     private:
-        std::unordered_map<std::string, std::string> headers_;
+       header_values headers_;
     };
 } // http
 

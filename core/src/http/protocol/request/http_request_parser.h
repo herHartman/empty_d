@@ -8,6 +8,8 @@
 #include <string>
 #include <bits/stdc++.h>
 #include <utility>
+#include <array>
+#include <string_view>
 #include "raw_request_message.h"
 #include "http/protocol/http_methods.h"
 #include "raw_request_message.h"
@@ -106,12 +108,11 @@ namespace http {
          :  headers_parser_() {}
 
         [[nodiscard]] std::size_t parse_message(
-            const std::string& data,
-            const std::size_t len,
+            const std::string_view& data,
             raw_request_message& request_message
         ) {
             std::size_t current_substr_start_pos = 0;
-            for (int i = 0; i < len; ++i) {
+            for (int i = 0; i < data.size(); ++i) {
                 switch (current_state_) {
                     case request_state::PARSE_METHOD:
                         if (isspace(data[i])) {

@@ -15,7 +15,7 @@ namespace http {
     public:
 
         explicit http_response(
-            http::web::http_headers headers,
+            http::web::headers headers,
             http::web::http_status status,
             std::string body,
             std::size_t content_length
@@ -32,7 +32,7 @@ namespace http {
         void set_status(http::web::http_status status) { status_ = status; }
 
     private:
-        http::web::http_headers headers_;
+        http::web::headers headers_;
         http::web::http_status status_;
         std::string body_;
         std::size_t content_length_;
@@ -42,11 +42,11 @@ namespace http {
     template<is_serializable T>
     http_response make_json_response(T object, http::web::http_status status) {
         std::string response_body = typename T::serializer{}.serialize(object);
-        return http_response{http::web::http_headers{}, status, response_body, response_body.size()};
+        return http_response{http::web::headers{}, status, response_body, response_body.size()};
     }
 
     template<is_serializable T>
-    http_response make_json_response(T object, http::web::http_status status, const http::web::http_headers& headers) {
+    http_response make_json_response(T object, http::web::http_status status, const http::web::headers& headers) {
         std::string response_body = typename T::serializer{}.serialize(object);
         return http_response{headers, status, response_body, response_body.size()};
     }

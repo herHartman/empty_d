@@ -4,6 +4,6 @@
 
 #include "http_writer.h"
 
-awaitable<void> http::http_writer::write_headers(const http::web::http_headers &headers) {
+awaitable<void> http::http_writer::write_headers(const http::web::headers &headers) {
 
 }

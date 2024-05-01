@@ -4,8 +4,8 @@
 
 #include "http_protocol.h"
 
+  
 awaitable<void> base_protocol::handle() {
-
   try {
     while (transport_->is_open()) {
       std::size_t data_len =

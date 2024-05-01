@@ -5,7 +5,6 @@
 #ifndef SIMPLE_HTTP_SERVER_TCP_SERVER_H
 #define SIMPLE_HTTP_SERVER_TCP_SERVER_H
 
-
 #include "http/web/http_protocol.h"
 #include "transport.h"
 #include <boost/asio.hpp>
@@ -42,23 +41,8 @@ public:
         protocol_factory_(std::move(factory)), requests_count_(0),
         is_running_(false), max_requests_(max_requests) {}
 
-  boost::asio::awaitable<void> start() {
-    is_running_ = true;
-    while (is_running_) {
-      auto connection =
-          protocol_factory_.create_protocol(std::make_shared<transport>(
-              co_await acceptor_.async_accept(boost::asio::use_awaitable)));
-      co_spawn(acceptor_.get_executor(),
-               handle_connection(std::move(connection)), detached);
-
-      ++requests_count_;
-    }
-  }
-
-  void shutdown() {
-    acceptor_.close();
-    is_running_ = false;
-  }
+  boost::asio::awaitable<void> start();
+  void shutdown();
 
 private:
   tcp::acceptor acceptor_;

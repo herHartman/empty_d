@@ -8,6 +8,8 @@
 #include <string>
 #include <unordered_map>
 #include <charconv>
+#include <string_view>
+#include <vector>
 #include "http/protocol/http_methods.h"
 
 namespace http {
@@ -15,7 +17,7 @@ namespace http {
         http_methods method;
         std::string path;
         std::string version;
-        std::unordered_map<std::string, std::string> headers;
+        std::unordered_map<std::string_view, std::vector<std::string_view>> headers;
         std::string compression;
         bool upgrade;
         bool chunked;

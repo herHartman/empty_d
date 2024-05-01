@@ -15,7 +15,7 @@ namespace http {
 
     public:
         explicit http_writer(network::transport::transport_p transport) : transport_(std::move(transport)) {}
-        awaitable<void> write_headers(const http::web::http_headers& headers);
+        awaitable<void> write_headers(const http::web::headers& headers);
     private:
         network::transport::transport_p transport_;
     };
