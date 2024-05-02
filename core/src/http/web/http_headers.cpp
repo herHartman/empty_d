@@ -4,53 +4,45 @@
 
 #include "http_headers.h"
 #include <sstream>
+#include <vector>
 
 namespace http::web {
-
-    void http_headers::set_basic_auth(const std::string &username, const std::string &password) {
-
+    
+    void headers::set(header_key key, header_value value) {
+        headers_.erase(key);
+        std::vector<header_value> values{std::move(value)};
+        values.reserve(1);
+        headers_.insert({std::move(key), values});
+    }
+    
+    void headers::set(header_key key, std::vector<header_value> values) {
+        headers_.erase(key);
+        headers_.insert({std::move(key), std::move(values)});
+    }
+    
+    void headers::add(header_key key, header_value value) {
+       auto entry = headers_.find(key);
+       if (entry == headers_.end()) {
+            set(std::move(key), std::move(value));
+       } else {
+            entry->second.push_back(std::move(value)); 
+       }
     }
 
-    void http_headers::set_bearer_auth(const std::string &token) {
-
+    void headers::add(header_key key, std::vector<header_value> values) {
+        auto entry = headers_.find(key);
+        if (entry == headers_.end()) {
+            set(std::move(key), std::move(values));
+        } else {
+            for (const auto& iter : values) {
+                entry->second.push_back(iter);
+            }
+        }
     }
 
-    void http_headers::add(const std::string &header_name, const std::string &header_value) {
-
-    }
-
-    void http_headers::set_origin(const std::string &origin) {
-
-    }
-
-    void http_headers::set_location(const std::string &location) {
-
-    }
-
-    void http_headers::set_host(const std::string &host) {
-
-    }
-
-    void http_headers::set_date(const std::string &date) {
-
-    }
-
-    void http_headers::set_content_type(const std::string &media_type) {
-
-    }
-
-    void http_headers::set_content_length(std::size_t content_size) {
-
-    }
-
-    void http_headers::set_connection(const std::string &connection) {
-
-    }
-
-    std::string http_headers::format_headers() const {
+    std::string headers::format_headers() const {
         std::stringstream buf;
         for (const auto & header : headers_) {
-            buf << header.first << ": " << header.second << "\r\n";
         }
         buf << "\r\n";
         return buf.str();
