@@ -15,7 +15,7 @@ namespace http::web {
 
     class uri_dispatcher {
     public:
-        std::optional<resource_route> resolve(http_request& request);
+        std::optional<resource_route> resolve(request& request);
         void add_router(
             const std::string& path,
             const handler_t& handler,

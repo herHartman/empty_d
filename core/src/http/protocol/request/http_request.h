@@ -7,6 +7,7 @@
 
 #include "definitions/boost_asio_types.h"
 #include "http/protocol/http_body_stream_reader.h"
+#include "http/protocol/http_methods.h"
 #include "http/protocol/request/raw_request_message.h"
 #include "io/serializable/json_serializable.h"
 #include <string>
@@ -15,9 +16,9 @@
 using namespace boost;
 
 namespace http {
-    class http_request {
+    class request {
     public:
-        explicit http_request(
+        explicit request(
                 std::shared_ptr<http_body_stream_reader> stream_reader,
                 raw_request_message request_message
         )
@@ -62,7 +63,7 @@ namespace http {
     }
 
     [[nodiscard]] http::http_methods get_method() const {
-        return request_message_.method;
+        return method_;
     }
 
     [[nodiscard]] std::shared_ptr<http_body_stream_reader> get_stream_reader() const {
@@ -73,13 +74,13 @@ namespace http {
         std::optional<std::size_t> content_length_;
         std::optional<std::string_view> content_type_;
 
+        http::http_methods method_;
         std::string host_;
         std::string url_;
         std::string version_;
         std::shared_ptr<http_body_stream_reader> stream_reader_;
         std::vector<char> buffer_;
         std::optional<std::string> path_;
-        raw_request_message request_message_;
     };
 }
 

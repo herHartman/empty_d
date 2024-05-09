@@ -20,7 +20,7 @@ namespace http {
             const std::shared_ptr<http::web::uri_dispatcher>& uri_dispatcher
         ) : uri_dispatcher_(uri_dispatcher) {}
 
-        awaitable<http_response> handle_request(http_request& request);
+        awaitable<http_response> handle_request(request& request);
     private:
         std::shared_ptr<http::web::uri_dispatcher> uri_dispatcher_;
     };

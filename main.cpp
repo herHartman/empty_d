@@ -13,7 +13,7 @@ namespace this_coro = boost::asio::this_coro;
 
 using namespace boost;
 
-awaitable<http::http_response> handler(http::http_request& request_message) {
+awaitable<http::http_response> handler(http::request& request_message) {
     co_return http::http_response({}, static_cast<http::web::http_status>(200), "", 1);
 }
 

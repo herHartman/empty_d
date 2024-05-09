@@ -6,7 +6,7 @@
 #include "../protocol/request/http_request.h"
 
 namespace http {
-    awaitable<http_response> http_request_handler::handle_request(http_request& request) {
+    awaitable<http_response> http_request_handler::handle_request(request& request) {
         std::optional<web::resource_route> route = uri_dispatcher_->resolve(request);
         if (route) {
             handler_t handler = route.value().get_handler();

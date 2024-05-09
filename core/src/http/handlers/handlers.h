@@ -12,8 +12,8 @@
 
 using boost::asio::awaitable;
 
-typedef std::function<awaitable<http::http_response>(http::http_request&)> handler_t;
+typedef std::function<awaitable<http::http_response>(http::request&)> handler_t;
 
-http::http_response handle_request(http::http_request& request_message);
+http::http_response handle_request(http::request& request_message);
 
 #endif //SIMPLE_HTTP_SERVER_HANDLERS_H

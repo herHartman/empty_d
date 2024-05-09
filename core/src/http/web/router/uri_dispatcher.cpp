@@ -10,7 +10,7 @@
 
 namespace http::web {
 
-    std::optional<resource_route> uri_dispatcher::resolve(http_request& request) {
+    std::optional<resource_route> uri_dispatcher::resolve(request& request) {
         for (auto & resource : resources_) {
             std::optional<resource_route> route = resource->resolve(request);
             if (route) return route;
