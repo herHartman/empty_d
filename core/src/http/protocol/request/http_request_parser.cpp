@@ -1,7 +1,3 @@
-//
-// Created by chopk on 20.03.24.
-//
-
 #include "http_request_parser.h"
 #include "http/protocol/http_methods.h"
 #include "http/protocol/request/http_request.h"
