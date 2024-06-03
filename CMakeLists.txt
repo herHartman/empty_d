@@ -16,7 +16,11 @@ add_executable(empty_d main.cpp
 )
 
 
-target_link_libraries(empty_d PRIVATE Boost::boost Boost::json)
+target_link_libraries(
+  empty_d 
+  PRIVATE Boost::boost Boost::json
+  PRIVATE gtest gmock pthread
+)
 
 target_include_directories(empty_d PUBLIC 
     ${PROJECT_SOURCE_DIR}/core/src
