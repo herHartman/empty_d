@@ -1,11 +1,14 @@
 #include <gtest/gtest.h>
+#include "http/web/radix_tree_map.h"
 
-using namespace http::web;
+TEST(RadixTreeTest, RadixTreeInsert) {
+  http::web::radix_tree_map<int, char> tree;
+  tree.insert({"test",1});
+  tree.insert({"abc",1});
 
-TEST(TmpAddTest, CheckValues) {
- radix_tree_map<int, char> map;
- map.insert({"test",1});
+  auto begin = *tree.begin();
 }
+
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

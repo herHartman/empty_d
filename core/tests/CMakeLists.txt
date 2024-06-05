@@ -22,8 +22,14 @@ foreach(file ${UNIT_TEST_SOURCES})
     find_package(GTest REQUIRED)
 
     if(${CMAKE_PROJECT_NAME}_USE_GOOGLE_MOCK)
-    set(GOOGLE_MOCK_LIBRARIES GTest::gmock GTest::gmock_main)
+      set(GOOGLE_MOCK_LIBRARIES GTest::gmock GTest::gmock_main)
     endif()
+
+    set(${CMAKE_PROJECT_NAME}_TEST_LIB empty_d-core)
+
+    target_include_directories(${test_name}_Tests PUBLIC 
+      ${CORE_SOURCE_DIR}
+    )
 
     target_link_libraries(
     ${test_name}_Tests
@@ -31,8 +37,15 @@ foreach(file ${UNIT_TEST_SOURCES})
         GTest::GTest
         GTest::Main
         ${GOOGLE_MOCK_LIBRARIES}
-        ${${CMAKE_PROJECT_NAME}_TEST_LIB}
+    )
+
+    add_test(
+      NAME
+        ${test_name}
+      COMMAND
+        ${test_name}_Tests
     )
 endforeach()
 
+verbose_message("${CORE_SOURCE_DIR}")
 verbose_message("Finished adding unit tests for ${CMAKE_PROJECT_NAME}.")

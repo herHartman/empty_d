@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -10,7 +11,7 @@
 
 std::size_t common_long_prefix(std::string_view x, std::string_view key) {
   for (int i = 0; i < key.size(); ++i) {
-    if (i == x.size() || x[i] == key[i]) {
+    if (i == x.size() || x[i] != key[i]) {
       return i;
     }
   }
@@ -25,13 +26,31 @@ template <typename Value, typename KCharT> struct rd_tree_node {
   typedef std::basic_string<KCharT, std::char_traits<KCharT>,
                             std::allocator<KCharT>>
       key_type;
-  typedef rd_tree_node<value_type, key_type> *base_ptr;
-  typedef const rd_tree_node<value_type, key_type> *const_base_ptr;
+  typedef rd_tree_node<value_type, KCharT> *base_ptr;
+  typedef const rd_tree_node<value_type, KCharT> *const_base_ptr;
 
-  base_ptr next;
-  base_ptr minor;
-  base_ptr parent;
+  base_ptr next = nullptr;
+  base_ptr minor = nullptr;
+  base_ptr parent = nullptr;
   std::optional<value_type> value_field;
+  key_type key;
+
+  rd_tree_node() = default;
+  rd_tree_node(const rd_tree_node &) = default;
+  rd_tree_node(rd_tree_node &&) = default;
+  
+
+
+  rd_tree_node(key_type key, std::optional<value_type> value)
+      : key(std::move(key)), value_field(std::move(value)), next(nullptr),
+        minor(nullptr), parent(nullptr) {}
+
+  rd_tree_node(key_type key, std::optional<value_type> value, base_ptr minor, base_ptr parent,
+               base_ptr next)
+      : key(std::move(key)), value_field(std::move(value)), next(next),
+        minor(minor), parent(parent) {}
+
+
 
   static inline std::optional<value_type> traverse_for_value(base_ptr *x) {
     while (x && !x->value) {
@@ -74,7 +93,7 @@ public:
     typedef node_type::key_type key_type;
     typedef Value mapped_type;
     typedef std::pair<const key_type, mapped_type> value_type;
-    typedef Value *reference;
+    typedef Value &reference;
     typedef Value *pointer;
 
     typedef std::forward_iterator_tag iterator_category;
@@ -82,8 +101,8 @@ public:
 
     iterator() = default;
     explicit iterator(base_ptr x) : node(x) {}
-    reference operator*() const { return node->value_field; }
-    pointer operator->() const { return std::__addressof(node->value_field); }
+    reference operator*() const { return node->value_field.value(); }
+    pointer operator->() const { return std::__addressof(node->value_field.value()); }
 
     iterator &operator++() {
       node = node_type::rd_tree_incremenent(node);
@@ -115,14 +134,14 @@ public:
 
   typedef iterator iterator;
 
-  radix_tree_map() = default;
-  radix_tree_map(const radix_tree_map &x) = default;
-  radix_tree_map(const radix_tree_map &&x) = default;
-  radix_tree_map &operator=(const radix_tree_map &) = default;
-  radix_tree_map &operator=(radix_tree_map &&) = default;
+  // radix_tree_map() = default;
+  // radix_tree_map(const radix_tree_map &x) = default;
+  // radix_tree_map(const radix_tree_map &&x) = default;
+  // radix_tree_map &operator=(const radix_tree_map &) = default;
+  // radix_tree_map &operator=(radix_tree_map &&) = default;
 
   iterator begin() noexcept {
-    return root_.minor ? ++iterator(root_.minor) : iterator(root_);
+    return root_.minor ? ++iterator(*root_.minor) : iterator(root_);
   }
 
   iterator end() noexcept { return iterator(root_); }
@@ -142,18 +161,21 @@ public:
   std::pair<iterator, bool> insert(value_type &&x) {
     return insert_internal(std::move(x));
   }
-  
+
 private:
   node_type root_;
 
   std::pair<iterator, bool> insert_internal(const value_type &x) {
-    const key_type key = x.first;
-    mapped_type &value = x.second;
+    key_type key = x.first;
+    const mapped_type &value = x.second;
+    
+    std::cout << "start insert\n";
 
     if (!root_.minor) {
-      auto *new_node = node_type(key, value);
+      std::cout << "tree is empty\n";
+      auto *new_node = new node_type(key, value);
       root_.minor = new_node;
-      return {iterator(root_.minor, true)};
+      return {iterator(root_.minor), true};
     }
 
     node_type *traverse_node = root_.minor;
@@ -181,13 +203,13 @@ private:
         traverse_node->key.erase(0, common_prefix_len);
         if (common_prefix_len == key.size()) {
           new_node->key = key;
-          return {iterator(new_node, true)};
+          return {iterator(new_node), true};
         }
         key = key.substr(common_prefix_len, key.size());
         traverse_node = new_node;
       }
     }
-    return {iterator(&root_, false)};
+    return {iterator(&root_), false};
   }
 
   std::optional<mapped_type> lookup(const key_type &x) {

@@ -20,6 +20,7 @@ file (GLOB_RECURSE HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
 )
 
+
 add_library(
   ${PROJECT_NAME}
   ${HEADERS}
@@ -31,11 +32,21 @@ find_package(Boost REQUIRED COMPONENTS json)
 
 enable_testing()
 
+set(CORE_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
+
 target_include_directories(empty_d-core PUBLIC 
-    ${PROJECT_SOURCE_DIR}/src
+  ${CORE_SOURCE_DIR}
 )
 
+
+target_include_directories(
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                         $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
+)
+
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
 
 target_link_libraries(
     empty_d-core
