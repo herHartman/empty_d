@@ -32,9 +32,8 @@ public:
 
   template <typename ConstBufferSequence>
   awaitable<void> write(const ConstBufferSequence &buffers) {
-    std::tuple<boost::system::error_code> result =
-        co_await socket_.async_write_some(buffers,
-                                          as_tuple(boost::asio::use_awaitable));
+    co_await socket_.async_write_some(buffers,
+                                      as_tuple(boost::asio::use_awaitable));
   }
 
   [[nodiscard]] auto get_executor() { return socket_.get_executor(); }

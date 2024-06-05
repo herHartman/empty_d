@@ -12,7 +12,7 @@ void http::web::web_application::add_route(
     router_->add_router(path, handler, http_method);
 }
 
-awaitable<void> http::web::web_application::handle_request(http::http_request &request) {
+awaitable<void> http::web::web_application::handle_request(http::request &request) {
     std::optional<resource_route> route = router_->resolve(request);
     if (route) {
         handler_t handler = route.value().get_handler();

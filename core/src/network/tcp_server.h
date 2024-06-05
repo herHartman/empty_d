@@ -1,11 +1,6 @@
-//
-// Created by chopk on 19.03.24.
-//
+#pragma once
 
-#ifndef SIMPLE_HTTP_SERVER_TCP_SERVER_H
-#define SIMPLE_HTTP_SERVER_TCP_SERVER_H
-
-#include "http/web/http_protocol.h"
+#include "http/protocol/http_protocol.h"
 #include "transport.h"
 #include <boost/asio.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -57,5 +52,3 @@ private:
   }
 };
 } // namespace network
-
-#endif // SIMPLE_HTTP_SERVER_TCP_SERVER_H

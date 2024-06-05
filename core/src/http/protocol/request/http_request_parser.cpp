@@ -111,7 +111,7 @@ headers_parser::parse_headers(const char *data, std::size_t len,
         current_substr_pos = i + 1;
         break;
       } else {
-        return {{}, -1};
+        return {std::nullopt, -1};
       }
     case parse_header_state::PARSE_SPACES_BEFORE_VALUE:
       if (isspace(data[i])) {
@@ -120,7 +120,7 @@ headers_parser::parse_headers(const char *data, std::size_t len,
         current_state_ = parse_header_state::PARSE_VALUE;
         break;
       } else {
-        return {{}, -1};
+        return {std::nullopt, -1};
       }
     case parse_header_state::PARSE_VALUE:
       for (; i < len; ++i) {
@@ -133,18 +133,18 @@ headers_parser::parse_headers(const char *data, std::size_t len,
             current_state_ = parse_header_state::PARSE_HEADER_FIELD_START;
             break;
           } else {
-            return {{}, -1};
+            return {std::nullopt, -1};
           }
         }
 
         if (!is_header_char(data[i])) {
-          return {{}, -1};
+          return {std::nullopt, -1};
         }
       }
     }
     ++i;
   }
-  return {{}, -1};
+  return {std::nullopt, -1};
 }
 
 request http_request_parser::parse_message(const char *data, std::size_t len,

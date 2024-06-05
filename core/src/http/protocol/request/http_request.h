@@ -19,10 +19,9 @@ namespace http {
     class request {
     public:
         explicit request(
-                std::shared_ptr<http_body_stream_reader> stream_reader,
-                raw_request_message request_message
+                std::shared_ptr<http_body_stream_reader> stream_reader
         )
-            : stream_reader_(std::move(stream_reader)), request_message_(std::move(request_message))  {}
+            : stream_reader_(std::move(stream_reader))  {}
 
         template<is_serializable T>
         awaitable<T> read_body() {
@@ -49,16 +48,16 @@ namespace http {
         }
 
     [[nodiscard]] std::size_t get_content_length() {
-        if (!content_length_) {
-            content_length_ = request_message_.get_content_length();
-        }
+        // if (!content_length_) {
+        //     content_length_ = request_message_.get_content_length();
+        // }
         return content_length_.value();
     }
 
     [[nodiscard]] std::string get_path() {
-        if (!path_) {
-            path_ = request_message_.path;
-        }
+        // if (!path_) {
+        //     path_ = request_message_.path;
+        // }
         return path_.value();
     }
 

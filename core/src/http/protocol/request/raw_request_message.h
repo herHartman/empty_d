@@ -26,15 +26,15 @@ namespace http {
         std::size_t get_content_length() const {
             int content_length = 0;
             if (headers.contains("Content-Length")) {
-                std::string_view content_length_str = headers.at("Content-Length");
-                auto result = std::from_chars(
-                        content_length_str.data(),
-                        content_length_str.data() + content_length_str.size(),
-                        content_length
-                );
-                if (result.ec == std::errc::invalid_argument) {
-                    throw std::exception();
-                }
+                // std::string_view content_length_str = headers.at("Content-Length");
+                // auto result = std::from_chars(
+                //         content_length_str.data(),
+                //         content_length_str.data() + content_length_str.size(),
+                //         content_length
+                // );
+                // if (result.ec == std::errc::invalid_argument) {
+                //     throw std::exception();
+                // }
             }
             return content_length;
         }

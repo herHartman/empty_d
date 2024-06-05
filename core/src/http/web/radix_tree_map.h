@@ -71,7 +71,7 @@ public:
   class iterator {
   public:
     typedef node_type::base_ptr base_ptr;
-    typedef base_ptr::key_type key_type;
+    typedef node_type::key_type key_type;
     typedef Value mapped_type;
     typedef std::pair<const key_type, mapped_type> value_type;
     typedef Value *reference;
