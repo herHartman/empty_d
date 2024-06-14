@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <tuple>
 
 std::size_t common_long_prefix(std::string_view x, std::string_view key) {
   for (int i = 0; i < key.size(); ++i) {
@@ -19,6 +20,49 @@ std::size_t common_long_prefix(std::string_view x, std::string_view key) {
 }
 
 namespace http::web {
+
+template <typename Key> struct prefix_comparator {
+  using key_iterator = Key::const_iterator;
+  using key_type = Key;
+
+  using result_type = std::pair<key_iterator, key_iterator>;
+
+  result_type find_common_prefix(const key_type &key1, const key_type &key2) {
+    key_iterator it1 = key1.cbegin();
+    key_iterator it2 = key2.cbegin();
+
+    key_iterator end1 = key1.cend();
+    key_iterator end2 = key2.cend();
+
+    if (*it1 != *it2) {
+      return {end1, end2};
+    }
+
+    while (it1 != end1) {
+      if (it2 == end2 || *it1 != *it2) {
+
+        if (*it1 == '{') {
+          it1 = std::find(it1, end1, '}');
+        }
+
+        if (*it2 == '{') {
+          it2 = std::find(it2, end2, '}');
+        }
+
+        return {it1, it2};
+      } else if (*it1 == '{') {
+        it1 = std::find(it1, end1, '}');
+        it2 = std::find(it2, end2, '}');
+
+        if (it1 + 1 == end1 && it2 + 1 == end2)
+          return {it1, it2};
+      }
+      ++it1;
+      ++it2;
+    }
+    return {it1, it2};
+  }
+};
 
 template <typename Value, typename KCharT> struct rd_tree_node {
   typedef Value value_type;
@@ -38,25 +82,21 @@ template <typename Value, typename KCharT> struct rd_tree_node {
   rd_tree_node() = default;
   rd_tree_node(const rd_tree_node &) = default;
   rd_tree_node(rd_tree_node &&) = default;
-  
-
 
   rd_tree_node(key_type key, std::optional<value_type> value)
       : key(std::move(key)), value_field(std::move(value)), next(nullptr),
         minor(nullptr), parent(nullptr) {}
 
-  rd_tree_node(key_type key, std::optional<value_type> value, base_ptr minor, base_ptr parent,
-               base_ptr next)
+  rd_tree_node(key_type key, std::optional<value_type> value, base_ptr minor,
+               base_ptr parent, base_ptr next)
       : key(std::move(key)), value_field(std::move(value)), next(next),
         minor(minor), parent(parent) {}
 
-
-
-  static inline std::optional<value_type> traverse_for_value(base_ptr *x) {
-    while (x && !x->value) {
+  static inline base_ptr traverse_for_value(base_ptr x) {
+    while (x && !x->value_field) {
       x = x->minor;
     }
-    return x ? x->value : std::nullopt;
+    return x;
   }
 
   static base_ptr rd_tree_incremenent(base_ptr x) noexcept {}
@@ -66,18 +106,22 @@ template <typename Value, typename KCharT> struct rd_tree_node {
   static base_ptr rd_tree_incremenent_local(base_ptr x) noexcept {
     base_ptr traverse_node = x->minor ? x->minor : x;
     if (traverse_node == x) {
-      while (traverse_node && !traverse_node->next) {
-        traverse_node = x->parent;
+      while (!traverse_node->key.empty() && !traverse_node->next) {
+        traverse_node = traverse_node->parent;
       }
-      if (traverse_node) {
+      if (!traverse_node->key.empty()) {
         traverse_node = traverse_node->next;
+      } else {
+        return traverse_node;
       }
     }
-    return traverse_for_value(x);
+    return traverse_for_value(traverse_node);
   }
 };
 
 template <typename Value, typename KCharT,
+          typename PrefixComparator =
+              prefix_comparator<typename rd_tree_node<Value, KCharT>::key_type>,
           typename Allocator = std::allocator<std::pair<
               const typename rd_tree_node<Value, KCharT>::key_type, Value>>>
 class radix_tree_map {
@@ -102,10 +146,12 @@ public:
     iterator() = default;
     explicit iterator(base_ptr x) : node(x) {}
     reference operator*() const { return node->value_field.value(); }
-    pointer operator->() const { return std::__addressof(node->value_field.value()); }
+    pointer operator->() const {
+      return std::addressof(node->value_field.value());
+    }
 
     iterator &operator++() {
-      node = node_type::rd_tree_incremenent(node);
+      node = node_type::rd_tree_incremenent_local(node);
       return *this;
     }
 
@@ -133,6 +179,7 @@ public:
   typedef Allocator allocator_type;
 
   typedef iterator iterator;
+  typedef PrefixComparator comparator;
 
   // radix_tree_map() = default;
   // radix_tree_map(const radix_tree_map &x) = default;
@@ -141,10 +188,10 @@ public:
   // radix_tree_map &operator=(radix_tree_map &&) = default;
 
   iterator begin() noexcept {
-    return root_.minor ? ++iterator(*root_.minor) : iterator(root_);
+    return root_.minor ? iterator(root_.minor) : end();
   }
 
-  iterator end() noexcept { return iterator(root_); }
+  iterator end() noexcept { return iterator(std::addressof(root_)); }
 
   value_type &operator[](const key_type &key) {}
 
@@ -164,49 +211,69 @@ public:
 
 private:
   node_type root_;
+  comparator comparator_;
 
   std::pair<iterator, bool> insert_internal(const value_type &x) {
     key_type key = x.first;
     const mapped_type &value = x.second;
-    
-    std::cout << "start insert\n";
 
     if (!root_.minor) {
-      std::cout << "tree is empty\n";
       auto *new_node = new node_type(key, value);
       root_.minor = new_node;
+      new_node->parent = std::addressof(root_);
       return {iterator(root_.minor), true};
     }
 
     node_type *traverse_node = root_.minor;
 
     while (traverse_node) {
-      std::size_t common_prefix_len =
-          common_long_prefix(traverse_node->key, key);
+      typename comparator::result_type compare_prefix_result =
+          comparator_.find_common_prefix(traverse_node->key, key);
 
-      if (!common_prefix_len) {
+      if (compare_prefix_result.first ==
+              traverse_node->key.begin() + traverse_node->key.size() - 1 &&
+          compare_prefix_result.second == key.begin() + key.size() - 1) {
+        break;
+      }
+
+      if (compare_prefix_result.first == traverse_node->key.end() &&
+          compare_prefix_result.second == key.end()) {
         if (!traverse_node->next) {
-          traverse_node->next = new node_type(key, value);
-          return {iterator(traverse_node->next), true};
+          auto *new_node = new node_type(key, value);
+          traverse_node->next = new_node;
+          new_node->parent = traverse_node->parent;
+          return {iterator(new_node), true};
         }
         traverse_node = traverse_node->next;
-      } else if (common_prefix_len == traverse_node->key.size() &&
-                 common_prefix_len == key.size()) {
-        break;
       } else if (common_prefix_len < traverse_node->key.size()) {
+
         auto *new_node =
             new node_type(traverse_node->key.substr(common_prefix_len,
                                                     traverse_node->key.size()),
-                          traverse_node->value_field);
+                          std::move(traverse_node->value_field));
+
         new_node->parent = traverse_node;
+        new_node->minor = traverse_node->minor;
         traverse_node->minor = new_node;
-        traverse_node->key.erase(0, common_prefix_len);
+
+        traverse_node->key.erase(common_prefix_len, traverse_node->key.size());
+
         if (common_prefix_len == key.size()) {
-          new_node->key = key;
+          traverse_node->value_field = value;
           return {iterator(new_node), true};
         }
+        traverse_node->value_field = std::nullopt;
         key = key.substr(common_prefix_len, key.size());
         traverse_node = new_node;
+      } else if (common_prefix_len == traverse_node->key.size()) {
+        key = key.substr(common_prefix_len, key.size());
+        if (!traverse_node->minor) {
+          auto *new_node = new node_type(key, std::move(value));
+          traverse_node->minor = new_node;
+          new_node->parent = traverse_node;
+          return {iterator(new_node), true};
+        }
+        traverse_node = traverse_node->minor;
       }
     }
     return {iterator(&root_), false};
