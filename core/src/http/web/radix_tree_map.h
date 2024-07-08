@@ -2,65 +2,60 @@
 
 #include <cstddef>
 #include <cstring>
-#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
-#include <tuple>
-
-std::size_t common_long_prefix(std::string_view x, std::string_view key) {
-  for (int i = 0; i < key.size(); ++i) {
-    if (i == x.size() || x[i] != key[i]) {
-      return i;
-    }
-  }
-  return key.size();
-}
+#include <unordered_map>
 
 namespace http::web {
 
 template <typename Key> struct prefix_comparator {
   using key_iterator = Key::const_iterator;
   using key_type = Key;
+  using size_type = key_type::size_type;
+  using result_type = std::pair<size_type, size_type>;
 
-  using result_type = std::pair<key_iterator, key_iterator>;
+  enum match_state {
+    START_SEGMENT,
+    SEGMENT,
+    
+  };
+
+  struct match_info {
+    size_type pref_pos_1;
+    size_type pref_pos_2;
+
+    std::unordered_map<key_type, key_type> params;
+  };
 
   result_type find_common_prefix(const key_type &key1, const key_type &key2) {
-    key_iterator it1 = key1.cbegin();
-    key_iterator it2 = key2.cbegin();
+    size_type i1 = 0;
+    size_type i2 = 0;
 
-    key_iterator end1 = key1.cend();
-    key_iterator end2 = key2.cend();
-
-    if (*it1 != *it2) {
-      return {end1, end2};
+    while (i1 < key1.size()) {
+      if (key1[i1])
     }
 
-    while (it1 != end1) {
-      if (it2 == end2 || *it1 != *it2) {
 
-        if (*it1 == '{') {
-          it1 = std::find(it1, end1, '}');
+    while (i1 < key1.size()) {
+      if (i2 == key2.size() || key1[i1] != key2[i2]) {
+        if (key1[i1] == '{') {
+          i1 = key1.find('}');
+          ++i1;
+        } else if (i2 < key2.size() && key2[i2] == '{') {
+          i2 = key2.find('}');
+          ++i2;
         }
-
-        if (*it2 == '{') {
-          it2 = std::find(it2, end2, '}');
-        }
-
-        return {it1, it2};
-      } else if (*it1 == '{') {
-        it1 = std::find(it1, end1, '}');
-        it2 = std::find(it2, end2, '}');
-
-        if (it1 + 1 == end1 && it2 + 1 == end2)
-          return {it1, it2};
+        return {i1, i2};
+      } else if (key1[i1] == '{') {
+        i1 = key1.find('}');
+        i2 = key2.find('}');
       }
-      ++it1;
-      ++it2;
+      ++i1;
+      ++i2;
     }
-    return {it1, it2};
+    return {i1, i2};
   }
 };
 
@@ -193,13 +188,17 @@ public:
 
   iterator end() noexcept { return iterator(std::addressof(root_)); }
 
-  value_type &operator[](const key_type &key) {}
+  [[nodiscard]] bool empty() const noexcept { return root_.minor == nullptr; }
 
-  value_type &&operator[](key_type &&key) {}
+  [[nodiscard]] std::size_t size() const noexcept { return size_; }
 
-  value_type &at(const key_type &key) {}
+  mapped_type &operator[](const key_type &key) {}
 
-  const value_type &at(const key_type &key) const {}
+  mapped_type &&operator[](key_type &&key) {}
+
+  mapped_type &at(const key_type &key) {}
+
+  const mapped_type &at(const key_type &key) const {}
 
   std::pair<iterator, bool> insert(const value_type &x) {
     return insert_internal(x);
@@ -212,6 +211,7 @@ public:
 private:
   node_type root_;
   comparator comparator_;
+  std::size_t size_;
 
   std::pair<iterator, bool> insert_internal(const value_type &x) {
     key_type key = x.first;
@@ -230,14 +230,13 @@ private:
       typename comparator::result_type compare_prefix_result =
           comparator_.find_common_prefix(traverse_node->key, key);
 
-      if (compare_prefix_result.first ==
-              traverse_node->key.begin() + traverse_node->key.size() - 1 &&
-          compare_prefix_result.second == key.begin() + key.size() - 1) {
+      if (compare_prefix_result.first == traverse_node->key.size() &&
+          compare_prefix_result.second == key.size()) {
         break;
       }
 
-      if (compare_prefix_result.first == traverse_node->key.end() &&
-          compare_prefix_result.second == key.end()) {
+      if (compare_prefix_result.first == 0 &&
+          compare_prefix_result.second == 0) {
         if (!traverse_node->next) {
           auto *new_node = new node_type(key, value);
           traverse_node->next = new_node;
@@ -245,10 +244,10 @@ private:
           return {iterator(new_node), true};
         }
         traverse_node = traverse_node->next;
-      } else if (common_prefix_len < traverse_node->key.size()) {
+      } else if (compare_prefix_result.first < traverse_node->key.size()) {
 
         auto *new_node =
-            new node_type(traverse_node->key.substr(common_prefix_len,
+            new node_type(traverse_node->key.substr(compare_prefix_result.first,
                                                     traverse_node->key.size()),
                           std::move(traverse_node->value_field));
 
@@ -256,17 +255,18 @@ private:
         new_node->minor = traverse_node->minor;
         traverse_node->minor = new_node;
 
-        traverse_node->key.erase(common_prefix_len, traverse_node->key.size());
+        traverse_node->key.erase(compare_prefix_result.first,
+                                 traverse_node->key.size());
 
-        if (common_prefix_len == key.size()) {
+        if (compare_prefix_result.second == key.size()) {
           traverse_node->value_field = value;
           return {iterator(new_node), true};
         }
         traverse_node->value_field = std::nullopt;
-        key = key.substr(common_prefix_len, key.size());
+        key = key.substr(compare_prefix_result.second, key.size());
         traverse_node = new_node;
-      } else if (common_prefix_len == traverse_node->key.size()) {
-        key = key.substr(common_prefix_len, key.size());
+      } else if (compare_prefix_result.first == traverse_node->key.size()) {
+        key = key.substr(compare_prefix_result.first, key.size());
         if (!traverse_node->minor) {
           auto *new_node = new node_type(key, std::move(value));
           traverse_node->minor = new_node;
@@ -278,28 +278,27 @@ private:
     }
     return {iterator(&root_), false};
   }
-
-  std::optional<mapped_type> lookup(const key_type &x) {
-    node_type *traverse_node = &root_;
+public:
+  std::optional<mapped_type> lookup(const key_type &key) {
+    node_type *traverse_node = root_.minor;
     std::size_t elements_found = 0;
-
     while (traverse_node) {
-      std::size_t common_prefix_len = common_long_prefix(traverse_node->key, x);
-      if (common_prefix_len == traverse_node->key.size()) {
-        elements_found += common_prefix_len;
-        if (elements_found == x.size()) {
-          return traverse_node->value;
-        } else {
-          traverse_node = traverse_node->minor;
+      typename comparator::result_type compare_prefix_result =
+          comparator_.find_common_prefix(traverse_node->key, key);
+
+      if (compare_prefix_result.first == traverse_node->key.size()) {
+        elements_found += compare_prefix_result.second;
+        if (elements_found == key.size()) {
+          return traverse_node->value_field;
         }
-      } else if (common_prefix_len < traverse_node->key.size()) {
-        return std::nullopt;
-      } else {
         traverse_node = traverse_node->minor;
+      } else if (!compare_prefix_result.first) {
+        traverse_node = traverse_node->next;
+      } else {
+        return std::nullopt;
       }
     }
     return std::nullopt;
   }
 };
-
 } // namespace http::web
