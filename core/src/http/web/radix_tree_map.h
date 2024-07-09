@@ -33,9 +33,9 @@ template <typename Key> struct prefix_comparator {
     size_type i1 = 0;
     size_type i2 = 0;
 
-    while (i1 < key1.size()) {
-      if (key1[i1])
-    }
+    // while (i1 < key1.size()) {
+    //   if (key1[i1])
+    // }
 
 
     while (i1 < key1.size()) {

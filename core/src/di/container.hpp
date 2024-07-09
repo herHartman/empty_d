@@ -1,6 +1,8 @@
 #pragma once
 
+#include <array>
 #include <type_traits>
+#include <variant>
 
 namespace di_container {
 
@@ -15,21 +17,21 @@ template <typename Dependency, typename... Args> struct DependencyFactory {
   JustType<Dependency> dependency;
   Dependecies<Args...> deps;
 
-  template <typename T> T createDependency() { 
-    return T();
+  Dependency createDependency() {
+    return Dependency(DependencyCreator<Args>().createDependency()...);
   }
 
   template <typename T> struct DependencyCreator {
-
     T createDependency() { return T(); }
   };
 
   template <typename T, typename... Deps>
   struct DependencyCreator<DependencyFactory<T, Deps...>> {
     T createDependency() {
-      return T(DependencyCreator<Deps>().createDependency...);
+      return T(DependencyCreator<Deps>().createDependency()...);
     }
   };
+
 };
 
 template <typename T, typename... Ts>
@@ -53,9 +55,38 @@ constexpr bool contains(DependencyFactory<Ts...>) {
   return (... || std::is_same_v<T, Ts>);
 }
 
+
+
 template <typename... Deps> struct Container {
 
-  template <typename T> static decltype(auto) resolve() {}
+  template <typename T> Container<Deps..., T> registerProvider() {
+    return {};
+  }
+
+    template <typename T> Container<Deps..., T> registerProvider(T) {
+    return {};
+  }
+
+
+  template<typename... T> Container<Deps..., T...> registerProviders() {
+    return {};
+  }
+  
+  template<typename... T> Container<Deps..., T...> registerProviders(T... factories) {
+    return {};
+  }
+
+  template <typename T> constexpr decltype(auto) resolve() {
+    constexpr std::array<std::variant<Deps...>, sizeof...(Deps)> deps;
+    
+    for (constexpr auto dep : deps) {
+      if constexpr (std::holds_alternative<T>(dep)) {
+          
+      } 
+    }
+  }
+
+
 };
 
 }; // namespace di_container
