@@ -1,6 +1,7 @@
 #include "di/container.hpp"
 #include "gtest/gtest.h"
 #include <gtest/gtest.h>
+#include <optional>
 
 using di_container::Container;
 using di_container::DependencyFactory;
@@ -32,6 +33,8 @@ public:
 };
 } // namespace
 
+
+
 TEST(DITest, DITestCreateDependency) {
 
   auto dep1Provider = DependencyFactory<Dep1>{};
@@ -51,5 +54,7 @@ TEST(DITest, DITestCreateDependency) {
   auto container2 = container.registerProviders(
       dep1Provider, connProvider, dep2Provider, dep3provider, factory);
 
-  
+  auto new_a = container2.resolve<A>().value();
+  ASSERT_TRUE(new_a);
+
 }
