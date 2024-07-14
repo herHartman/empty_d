@@ -23,7 +23,7 @@ class Dep3 {};
 
 class A {
 public:
-  A() = delete;
+  A();
 
   A(Dep1 d1, Dep2 d2, Dep3 d3) : d1(d1), d2(d2), d3(d3) {}
 
@@ -33,7 +33,13 @@ public:
 };
 } // namespace
 
+template <typename T, typename... Args> T test_deduce_args(Args... args) {
+  return T(args...);
+}
 
+template <typename T> struct ubiq {
+  operator T() const { return {}; };
+};
 
 TEST(DITest, DITestCreateDependency) {
 
@@ -56,5 +62,4 @@ TEST(DITest, DITestCreateDependency) {
 
   auto new_a = container2.resolve<A>().value();
   ASSERT_TRUE(new_a);
-
 }

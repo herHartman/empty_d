@@ -92,7 +92,6 @@ template <typename... Deps> struct Container {
       if constexpr (std::is_same_v<T, targetType>) {
         dependency.emplace(arg.createDependency());
       }
-      std::cout << typeid(targetType).name() << std::endl;
     };
 
     for (auto dep : deps) {
