@@ -6,6 +6,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <string>
 
 using boost::asio::ip::tcp;
@@ -21,7 +22,11 @@ public:
 
   [[nodiscard]] bool IsConnected() const;
 
-  boost::asio::awaitable<void> Connect() {}
+  boost::asio::awaitable<void> Connect() {
+    if (IsConnected()) co_return;
+    boost::system::error_code ec = co_await ConnectImpl();
+
+  }
 
   void Disconnect();
 
@@ -30,13 +35,13 @@ private:
   tcp::socket socket_;
   tcp::endpoint redis_server_endpoint_;
 
-  boost::asio::awaitable<void> ConnectImpl() {
+  auto ConnectImpl() -> boost::asio::awaitable<boost::system::error_code> {
     socket_.open(tcp::v4());
     auto [error_code] = co_await socket_.async_connect(
         redis_server_endpoint_,
         boost::asio::as_tuple(boost::asio::use_awaitable));
 
-  
+    co_return error_code;
   }
 };
 } // namespace empty_d::redis
