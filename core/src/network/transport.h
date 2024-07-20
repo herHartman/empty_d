@@ -1,6 +1,5 @@
 
-#ifndef EMPTY_HTTP_SERVER_TRANSPORT_H
-#define EMPTY_HTTP_SERVER_TRANSPORT_H
+#pragma once
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -51,5 +50,3 @@ private:
 };
 
 } // namespace network
-
-#endif // EMPTY_HTTP_SERVER_TRANSPORT_H

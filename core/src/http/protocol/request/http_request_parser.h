@@ -64,7 +64,7 @@ class http_request_parser {
 public:
   explicit http_request_parser() : headers_parser_() {}
 
-  request parse_message(const char *data, std::size_t len,
+  Request parse_message(const char *data, std::size_t len,
                         std::size_t *body_start_position);
 
   awaitable<void> parse_body(const char *data, const std::size_t len,
@@ -93,7 +93,7 @@ private:
   request_state current_state_ = request_state::PARSE_METHOD;
   headers_parser headers_parser_;
   std::shared_ptr<http::http_body_stream_reader> payload_ = nullptr;
-  request_builder request_builder_;
+  HttpRequestBuilder request_builder_;
   std::size_t current_body_length_ = 0;
   std::size_t last_data_position_ = 0;
 };

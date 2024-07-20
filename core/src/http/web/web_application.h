@@ -30,7 +30,7 @@ namespace http::web {
         }
 
         void add_route(const std::string& path, const handler_t & handler, http_methods http_method);
-        awaitable<void> handle_request(http::request &request);
+        awaitable<void> handle_request(http::Request &request);
         void add_middleware(const std::function<void(raw_request_message)>& middleware_handler);
         awaitable<void> start(int port = 8080);
     private:

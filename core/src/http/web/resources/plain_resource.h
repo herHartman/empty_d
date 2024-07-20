@@ -17,7 +17,7 @@ namespace http::web {
     public:
         explicit plain_resource(std::string  path) : path_(std::move(path)) {}
         bool match(const std::string& path) override;
-        std::optional<resource_route> resolve(request& request_message) override;
+        std::optional<resource_route> resolve(Request& request_message) override;
         void add_route(const std::string& path, const handler_t& handler, http_methods http_method) override;
     private:
         std::string path_;

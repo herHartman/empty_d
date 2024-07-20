@@ -41,7 +41,7 @@ private:
   std::unique_ptr<http::http_writer> http_writer_ = nullptr;
   std::array<char, 8192> buffer_;
 
-  awaitable<void> handle_request(http::request &request) {
+  awaitable<void> handle_request(http::Request &request) {
     auto response = co_await request_handler_->handle_request(request);
     std::string status_line = "HTTP/1.1 200 HTTP_OK\r\n";
 

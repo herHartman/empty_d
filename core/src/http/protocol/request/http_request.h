@@ -16,9 +16,9 @@
 using namespace boost;
 
 namespace http {
-    class request {
+    class Request {
     public:
-        explicit request(
+        explicit Request(
                 std::shared_ptr<http_body_stream_reader> stream_reader
         )
             : stream_reader_(std::move(stream_reader))  {}

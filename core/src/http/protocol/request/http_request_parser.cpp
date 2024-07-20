@@ -147,7 +147,7 @@ headers_parser::parse_headers(const char *data, std::size_t len,
   return {std::nullopt, -1};
 }
 
-request http_request_parser::parse_message(const char *data, std::size_t len,
+Request http_request_parser::parse_message(const char *data, std::size_t len,
                                            std::size_t *body_start_position) {
   std::size_t current_substr_start_pos = 0;
   for (int i = 0; i < len; ++i) {

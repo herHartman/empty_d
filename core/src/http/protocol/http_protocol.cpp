@@ -12,7 +12,7 @@ awaitable<void> base_protocol::handle() {
         co_await transport_->read(boost::asio::buffer(buffer_));
 
     std::size_t start_body_index = 0;
-    http::request request = request_parser_.parse_message(
+    http::Request request = request_parser_.parse_message(
         buffer_.data(), data_len, &start_body_index);
 
     // if (!request_parser_.is_parse_message_complete()) {

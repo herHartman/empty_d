@@ -9,7 +9,7 @@ namespace http::web {
 bool plain_resource::match(const std::string &path) { return true; }
 
 std::optional<resource_route>
-plain_resource::resolve(request &request) {
+plain_resource::resolve(Request &request) {
 
   if (!match(request.get_path())) {
     return std::nullopt;

@@ -8,16 +8,14 @@
 
 namespace http {
 
-class request_builder {
+class HttpRequestBuilder {
 public:
-  request_builder() = default;
-  ~request_builder() = default;
-  void append_path(std::string_view url);
-  void append_method(http::http_methods method);
-  void append_http_version(std::string_view http_version);
-  void append_headers(web::headers headers);
-  
-  request build_request();
+  void AppendPath(std::string url);
+  void AppendMethod(http::http_methods method);
+  void AppendHttpVersion(std::string_view http_version);
+  void AppendHeaders(web::headers headers);
+
+ Request build_request();
 
 private:
   std::optional<std::string_view> url_;
