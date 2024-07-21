@@ -29,7 +29,7 @@ namespace http::web {
             server_ = std::make_unique<network::tcp_server>(io_context, port, http_protocol_factory(request_handler_));
         }
 
-        void add_route(const std::string& path, const handler_t & handler, http_methods http_method);
+        void add_route(const std::string& path, const handler_t & handler, HttpMethods http_method);
         awaitable<void> handle_request(http::Request &request);
         void add_middleware(const std::function<void(raw_request_message)>& middleware_handler);
         awaitable<void> start(int port = 8080);

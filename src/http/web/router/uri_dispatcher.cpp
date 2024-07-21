@@ -21,7 +21,7 @@ namespace http::web {
     void uri_dispatcher::add_router(
         const std::string& path,
         const handler_t& handler,
-        http_methods method
+        HttpMethods method
     ) {
         for (auto & resource : resources_) {
             if (resource->match(path)) {

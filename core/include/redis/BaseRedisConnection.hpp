@@ -68,7 +68,7 @@ public:
       co_await writer_timer_.async_wait(boost::asio::use_awaitable);
     }
   }
-
+  
   auto AsyncExecuteCommand(const Request &req) -> boost::asio::awaitable<void> {
     requests_.push_back(req);
   }

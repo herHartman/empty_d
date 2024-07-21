@@ -19,7 +19,7 @@ namespace http::web {
         void add_router(
             const std::string& path,
             const handler_t& handler,
-            http_methods method
+            HttpMethods method
         );
     private:
         std::vector<std::shared_ptr<abstract_resource>> resources_;

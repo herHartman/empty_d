@@ -16,7 +16,7 @@ namespace http::web {
     public:
         virtual std::optional<resource_route> resolve(Request& request_message) = 0;
         virtual bool match(const std::string& path) = 0;
-        virtual void add_route(const std::string& path, const handler_t& handler, http_methods http_method) = 0;
+        virtual void add_route(const std::string& path, const handler_t& handler, HttpMethods http_method) = 0;
         virtual ~abstract_resource() = default;
     };
 }

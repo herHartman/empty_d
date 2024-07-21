@@ -19,15 +19,15 @@ namespace http::web {
         explicit resource_route(
             std::string path,
             handler_t handler,
-            http_methods http_method
+            HttpMethods http_method
         ) : http_method_(http_method), path_(std::move(path)), handler_(std::move(handler)) {}
 
-        [[nodiscard]] http_methods get_method() const { return http_method_; }
+        [[nodiscard]] HttpMethods get_method() const { return http_method_; }
         [[nodiscard]] std::string get_path() const { return path_; }
         [[nodiscard]] handler_t get_handler() const { return handler_; }
 
     private:
-        const http_methods http_method_;
+        const HttpMethods http_method_;
         std::string path_;
         handler_t handler_;
     };

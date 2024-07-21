@@ -7,7 +7,7 @@
 void http::web::web_application::add_route(
     const std::string& path,
     const handler_t & handler,
-    http_methods http_method
+    HttpMethods http_method
 ) {
     router_->add_router(path, handler, http_method);
 }

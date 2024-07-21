@@ -28,7 +28,7 @@ plain_resource::resolve(Request &request) {
 
 void plain_resource::add_route(const std::string &path,
                                const handler_t &handler,
-                               http::http_methods http_method) {
+                               http::HttpMethods http_method) {
   if (!match(path)) {
     throw std::exception();
   }

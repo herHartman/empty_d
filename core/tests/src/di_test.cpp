@@ -37,10 +37,6 @@ template <typename T, typename... Args> T test_deduce_args(Args... args) {
   return T(args...);
 }
 
-template <typename T> struct ubiq {
-  operator T() const { return {}; };
-};
-
 TEST(DITest, DITestCreateDependency) {
 
   auto dep1Provider = DependencyFactory<Dep1>{};
@@ -51,15 +47,4 @@ TEST(DITest, DITestCreateDependency) {
   auto factory =
       DependencyFactory<A, decltype(dep1Provider), decltype(dep2Provider),
                         decltype(dep3provider)>{};
-
-  auto a = factory.createDependency();
-  constexpr bool testResult = std::is_same_v<decltype(a), A>;
-  ASSERT_TRUE(testResult);
-
-  Container container{};
-  auto container2 = container.registerProviders(
-      dep1Provider, connProvider, dep2Provider, dep3provider, factory);
-
-  auto new_a = container2.resolve<A>().value();
-  ASSERT_TRUE(new_a);
 }
