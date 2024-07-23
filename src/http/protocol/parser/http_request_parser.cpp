@@ -2,7 +2,9 @@
 #include "http/protocol/parser/http_parser/http_parser.h"
 #include <cstddef>
 #include <iostream>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace empty_d::http::protocol::parser {
 
@@ -21,7 +23,8 @@ const http_parser_settings HttpRequestParser::settings_ = []() {
   return settings;
 }();
 
-HttpRequestParser::HttpRequestParser() : parser_{}, url_parser_{} {
+HttpRequestParser::HttpRequestParser()
+    : parser_{}, url_parser_{}, request_builder_{}, current_header_field{} {
   http_parser_init(&parser_, HTTP_REQUEST);
   http_parser_url_init(&url_parser_);
   parser_.data = this;
@@ -89,27 +92,62 @@ int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
     return res;
   }
 
-  if (url_parser_.field_set << http_parser_url_fields::UF_PATH) {
-    
-
+  if (url_parser_.field_set << UF_PATH) {
+    size_t path_offset = url_parser_.field_data[UF_PATH].off;
+    size_t path_len = url_parser_.field_data[UF_PATH].len;
+    request_builder_.AppendPath(std::string(data[path_offset], data[path_len]));
   } else {
     return -1;
   }
 
+  if (url_parser_.field_set << UF_QUERY) {
+    size_t query_offset = url_parser_.field_data[UF_QUERY].off;
+    size_t query_len = url_parser_.field_data[UF_QUERY].len;
+    size_t pos = query_offset;
+    std::unordered_map<std::string, std::string> query;
+    ParseQueryState s = ParseQueryState::QUERY_NAME;
+    size_t current_part_begin_pos = pos;
+    std::string current_query_name;
 
+    while (pos < query_len) {
+      switch (s) {
+      case ParseQueryState::QUERY_NAME:
+        if (data[pos] == '=') {
+          s = ParseQueryState::QUERY_NAME;
+          current_query_name =
+              std::string(data[current_part_begin_pos], data[pos]);
+          current_part_begin_pos = pos + 1;
+        }
+        ++pos;
+        break;
+      case ParseQueryState::QUERY_VALUE:
+        if (data[pos] == '&' || ++pos == query_len) {
+          query[current_query_name] =
+              std::string(data[current_part_begin_pos], data[pos]);
+          s = ParseQueryState::QUERY_VALUE;
+          current_part_begin_pos = pos + 1;
+        }
+        break;
+      }
+    }
+    request_builder_.AppendQuery(std::move(query));
+  }
 
   return 0;
 }
 
 int HttpRequestParser::OnHeaderFieldImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  std::cout << std::string_view(data, data + len) << std::endl;
+  current_header_field = std::string_view(data, data[len]);
   return 0;
 }
 
 int HttpRequestParser::OnHeaderValueImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  std::cout << std::string_view(data, data + len) << std::endl;
+
+  request_builder_.AppendHeader(
+      std::string(current_header_field.begin(), current_header_field.end()),
+      std::string(data, data[len]));
   return 0;
 }
 
@@ -135,9 +173,9 @@ int HttpRequestParser::OnChunkHeaderImpl(http_parser *parser) { return 0; }
 
 int HttpRequestParser::OnChunkCompleteImpl(http_parser *parser) { return 0; }
 
-void HttpRequestParser::Parse(const char *data, size_t length) {
+HttpRequest HttpRequestParser::Parse(const char *data, size_t length) {
   size_t nparsed = http_parser_execute(&parser_, &settings_, data, length);
-  // std::cout << "parse data " << nparsed << std::endl;
+  return request_builder_.BuildRequest();
 }
 
 } // namespace empty_d::http::protocol::parser

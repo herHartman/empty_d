@@ -1,11 +1,21 @@
 #pragma once
 
 #include "http/protocol/parser/http_parser/http_parser.h"
+#include "http/protocol/request/http_request.h"
+#include "http/protocol/request/http_request_builder.h"
+
+using empty_d::http::request::HttpRequestBuilder;
+using empty_d::http::request::HttpRequest;
 
 namespace empty_d::http::protocol::parser {
 class HttpRequestParser {
 public:
   HttpRequestParser();
+
+  enum class ParseQueryState {
+    QUERY_NAME,
+    QUERY_VALUE
+  };
 
   int OnMessageBeginImpl(http_parser *parser);
   int OnUrlImpl(http_parser *parser, const char *data, size_t lenght);
@@ -35,13 +45,14 @@ public:
   static int OnChunkComplete(http_parser *parser);
 
 
-  void Parse(const char* data, size_t length);
-
+  HttpRequest Parse(const char* data, size_t length);
+  
 private:
   static const http_parser_settings settings_;
   http_parser parser_;
   http_parser_url url_parser_;
+  HttpRequestBuilder request_builder_;
 
-  
+  std::string_view current_header_field;
 };
 } // namespace empty_d::http::protocol::parser
