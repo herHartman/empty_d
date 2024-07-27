@@ -2,9 +2,11 @@
 
 #include <cstddef>
 #include <cstring>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -19,7 +21,6 @@ template <typename Key> struct prefix_comparator {
   enum match_state {
     START_SEGMENT,
     SEGMENT,
-    
   };
 
   struct match_info {
@@ -29,31 +30,43 @@ template <typename Key> struct prefix_comparator {
     std::unordered_map<key_type, key_type> params;
   };
 
-  result_type find_common_prefix(const key_type &key1, const key_type &key2) {
+  result_type FindCommonPrefix(const key_type &key,
+                               const key_type &request_path) {
     size_type i1 = 0;
     size_type i2 = 0;
+    match_state s = START_SEGMENT;
 
-    // while (i1 < key1.size()) {
-    //   if (key1[i1])
-    // }
-
-
-    while (i1 < key1.size()) {
-      if (i2 == key2.size() || key1[i1] != key2[i2]) {
-        if (key1[i1] == '{') {
-          i1 = key1.find('}');
-          ++i1;
-        } else if (i2 < key2.size() && key2[i2] == '{') {
-          i2 = key2.find('}');
-          ++i2;
+    while (i2 < request_path.size() && i1 < key.size()) {
+      switch (s) {
+      case START_SEGMENT:
+        if (key[i1] == '{') {
+          size_type end_segment_pos = key.find('}', i1);
+          if (end_segment_pos == key_type::npos) {
+            throw std::logic_error("invalid request path");
+          } else {
+            i1 = ++end_segment_pos;
+            i2 = request_path.find('/', i2);
+            if (i2 == key_type::npos) {
+              return {i1, request_path.size()};
+            }
+            break;
+          }
+        } else {
+          s = SEGMENT;
+          break;
         }
-        return {i1, i2};
-      } else if (key1[i1] == '{') {
-        i1 = key1.find('}');
-        i2 = key2.find('}');
+      case SEGMENT:
+        if (request_path[i2] != key[i1]) {
+          return {i1, i2};
+        } else {
+          if (request_path[i2] == '/') {
+            s = START_SEGMENT;
+          }
+          ++i2;
+          ++i1;
+          break;
+        }
       }
-      ++i1;
-      ++i2;
     }
     return {i1, i2};
   }
@@ -221,6 +234,7 @@ private:
       auto *new_node = new node_type(key, value);
       root_.minor = new_node;
       new_node->parent = std::addressof(root_);
+      std::cout << "insert to minor" << std::endl;
       return {iterator(root_.minor), true};
     }
 
@@ -228,8 +242,10 @@ private:
 
     while (traverse_node) {
       typename comparator::result_type compare_prefix_result =
-          comparator_.find_common_prefix(traverse_node->key, key);
+          comparator_.FindCommonPrefix(traverse_node->key, key);
 
+      std::cout << "res " << compare_prefix_result.first << " "
+                << compare_prefix_result.second << std::endl;
       if (compare_prefix_result.first == traverse_node->key.size() &&
           compare_prefix_result.second == key.size()) {
         break;
@@ -241,6 +257,7 @@ private:
           auto *new_node = new node_type(key, value);
           traverse_node->next = new_node;
           new_node->parent = traverse_node->parent;
+          std::cout << "insert2 " << key << std::endl;
           return {iterator(new_node), true};
         }
         traverse_node = traverse_node->next;
@@ -260,6 +277,7 @@ private:
 
         if (compare_prefix_result.second == key.size()) {
           traverse_node->value_field = value;
+          std::cout << "insert3" << key << std::endl;
           return {iterator(new_node), true};
         }
         traverse_node->value_field = std::nullopt;
@@ -271,26 +289,31 @@ private:
           auto *new_node = new node_type(key, std::move(value));
           traverse_node->minor = new_node;
           new_node->parent = traverse_node;
+          std::cout << "insert new minor " << key << std::endl;
           return {iterator(new_node), true};
         }
         traverse_node = traverse_node->minor;
       }
     }
+    std::cout << "bad insert" << key << std::endl;
     return {iterator(&root_), false};
   }
+
 public:
   std::optional<mapped_type> lookup(const key_type &key) {
     node_type *traverse_node = root_.minor;
     std::size_t elements_found = 0;
+    std::string key_view = key;
     while (traverse_node) {
       typename comparator::result_type compare_prefix_result =
-          comparator_.find_common_prefix(traverse_node->key, key);
+          comparator_.FindCommonPrefix(traverse_node->key, key_view);
 
       if (compare_prefix_result.first == traverse_node->key.size()) {
         elements_found += compare_prefix_result.second;
         if (elements_found == key.size()) {
           return traverse_node->value_field;
         }
+        key_view = key.substr(elements_found, key.size());
         traverse_node = traverse_node->minor;
       } else if (!compare_prefix_result.first) {
         traverse_node = traverse_node->next;

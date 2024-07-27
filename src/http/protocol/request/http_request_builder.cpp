@@ -12,4 +12,11 @@ void HttpRequestBuilder::AppendMethod(http::HttpMethods method) {}
 
 void HttpRequestBuilder::AppendPath(std::string path) {}
 
+void HttpRequestBuilder::AppendQuery(
+    std::unordered_map<std::string, std::string> query) {}
+
+void HttpRequestBuilder::AppendHeader(std::string, std::string) {}
+
+HttpRequest HttpRequestBuilder::BuildRequest() {}
+
 } // namespace empty_d::http::request

@@ -36,7 +36,7 @@ TEST(RadixTreeTest, ComparatorWithDynamicParams) {
   simple_comparator prefix_comparator;
   simple_tree::key_type k1 = "/test/{:id}/test";
   simple_tree::key_type k2 = "/test/{:simple_id}/border";
-  simple_comparator::result_type result1 = prefix_comparator.find_common_prefix(k1, k2);
+  simple_comparator::result_type result1 = prefix_comparator.FindCommonPrefix(k1, k2);
 
   EXPECT_EQ(result1.first, 12);
   EXPECT_EQ(result1.second, 19);
@@ -44,7 +44,7 @@ TEST(RadixTreeTest, ComparatorWithDynamicParams) {
   simple_tree::key_type k3 = "/border/{:id}";
   simple_tree::key_type k4 = "/border/{:test}";
 
-  simple_comparator::result_type result2 = prefix_comparator.find_common_prefix(k3, k4);
+  simple_comparator::result_type result2 = prefix_comparator.FindCommonPrefix(k3, k4);
 
   EXPECT_EQ(result2.first, k3.size());  
   EXPECT_EQ(result2.second, k4.size());
@@ -53,7 +53,7 @@ TEST(RadixTreeTest, ComparatorWithDynamicParams) {
   simple_tree::key_type k5 = "border/{:id}";
   simple_tree::key_type k6 = "/border/{:test}";
 
-  simple_comparator::result_type result3 = prefix_comparator.find_common_prefix(k5, k6);
+  simple_comparator::result_type result3 = prefix_comparator.FindCommonPrefix(k5, k6);
   EXPECT_EQ(result3.first, 0);
   EXPECT_EQ(result3.second, 0);
 }

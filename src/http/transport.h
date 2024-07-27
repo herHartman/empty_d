@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <boost/asio.hpp>
@@ -15,31 +14,31 @@ using boost::asio::experimental::channel;
 using boost::asio::ip::tcp;
 using namespace boost::asio::experimental::awaitable_operators;
 
-namespace network {
-class transport {
+namespace empty_d::network {
+class Transport {
 public:
-  typedef std::shared_ptr<transport> transport_p;
+  typedef std::shared_ptr<Transport> Transport_P;
 
-  explicit transport(tcp::socket socket) : socket_(std::move(socket)) {}
+  explicit Transport(tcp::socket socket) : socket_(std::move(socket)) {}
 
   template <typename MutableBufferSequence>
-  awaitable<std::size_t> read(const MutableBufferSequence &buffers) {
+  awaitable<std::size_t> Read(const MutableBufferSequence &buffers) {
     std::size_t len =
         co_await socket_.async_read_some(buffers, boost::asio::use_awaitable);
     co_return len;
   }
 
   template <typename ConstBufferSequence>
-  awaitable<void> write(const ConstBufferSequence &buffers) {
+  awaitable<void> Write(const ConstBufferSequence &buffers) {
     co_await socket_.async_write_some(buffers,
                                       as_tuple(boost::asio::use_awaitable));
   }
 
-  [[nodiscard]] auto get_executor() { return socket_.get_executor(); }
+  [[nodiscard]] auto GetExecutor() { return socket_.get_executor(); }
 
-  [[nodiscard]] bool is_open() const { return socket_.is_open(); }
+  [[nodiscard]] bool IsOpen() const { return socket_.is_open(); }
 
-  void close() {
+  void Close() {
     socket_.shutdown(tcp::socket::shutdown_send);
     socket_.shutdown(tcp::socket::shutdown_receive);
     socket_.close();
@@ -47,6 +46,10 @@ public:
 
 private:
   tcp::socket socket_;
+  std::string bucket_{};
+  boost::asio::dynamic_string_buffer<char, std::char_traits<char>,
+                                     std::allocator<char>>
+      read_buffer_{bucket_};
 };
 
-} // namespace network
+} // namespace empty_d::network

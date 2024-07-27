@@ -1,6 +1,7 @@
 // #include "network/tcp_server.h"
-#include "http/protocol/parser/http_request_parser.hpp"
+#include "http/web/radix_tree_map.h"
 #include <boost/json.hpp>
+#include <iostream>
 // #include <boost/asio/co_spawn.hpp>
 // #include <iostream>
 
@@ -18,8 +19,6 @@
 //     static_cast<http::web::http_status>(200), "", 1);
 // }
 
-using namespace empty_d::http::protocol::parser;
-
 const char *kRawRequest =
     "GET /favicon.ico?test=tester HTTP/1.1\r\n"
     "Host: 0.0.0.0=5000\r\n"
@@ -36,13 +35,29 @@ const char *kRawRequest =
 
 int main() {
 
-  HttpRequestParser parser{};
-  parser.Parse(kRawRequest, strlen(kRawRequest));
+  auto c = http::web::prefix_comparator<std::string>{};
+  auto [i1, i2] = c.FindCommonPrefix("/test/123", "/test/{test}");
+  std::cout << i1 << " " << i2 << std::endl;
+
+  auto map = http::web::radix_tree_map<std::string, char>{};
+
+  map.insert({"/test/{test}", "test"});
+  map.insert({"/test/{test}/git", "test2"});
+  map.insert({"/test/{test}/git/{git}", "test5"});
+  map.insert({"/bad", "test3"});
+  auto val1 = map.lookup("/test/123/git");
+  auto val2 = map.lookup("/test/123/git/123");
+
+  if (val1 && val2) {
+    std::cout << val1.value() << std::endl;
+    std::cout << val2.value() << std::endl;
+  }
+
   return 0;
   // boost::asio::io_context io_context{};
   // boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
   // signals.async_wait([&](auto, auto) { io_context.stop(); });
-
+ 
   // http::web::web_application application =
   // http::web::web_application(io_context, 8080);
   // application.add_route("/auth/guest", &handler,
