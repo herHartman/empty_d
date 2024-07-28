@@ -8,9 +8,8 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 
-namespace http::web {
+namespace empty_d::radix_tree {
 
 template <typename Key> struct prefix_comparator {
   using key_iterator = Key::const_iterator;
@@ -21,13 +20,6 @@ template <typename Key> struct prefix_comparator {
   enum match_state {
     START_SEGMENT,
     SEGMENT,
-  };
-
-  struct match_info {
-    size_type pref_pos_1;
-    size_type pref_pos_2;
-
-    std::unordered_map<key_type, key_type> params;
   };
 
   result_type FindCommonPrefix(const key_type &key,
@@ -44,6 +36,7 @@ template <typename Key> struct prefix_comparator {
           if (end_segment_pos == key_type::npos) {
             throw std::logic_error("invalid request path");
           } else {
+
             i1 = ++end_segment_pos;
             i2 = request_path.find('/', i2);
             if (i2 == key_type::npos) {
@@ -324,4 +317,4 @@ public:
     return std::nullopt;
   }
 };
-} // namespace http::web
+} // namespace empty_d::radix_tree

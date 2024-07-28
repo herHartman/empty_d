@@ -3,7 +3,7 @@
 #include "definitions/boost_asio_types.h"
 #include "http/protocol/http_body_stream_reader.h"
 #include "http/protocol/http_methods.h"
-#include "http/web/http_headers.h"
+#include "http/http_headers.h"
 #include "io/serializable/json_serializable.h"
 #include <boost/json.hpp>
 #include <string>

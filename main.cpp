@@ -1,5 +1,5 @@
 // #include "network/tcp_server.h"
-#include "http/web/radix_tree_map.h"
+#include "radix_tree/radix_tree_map.hpp"
 #include <boost/json.hpp>
 #include <iostream>
 // #include <boost/asio/co_spawn.hpp>
@@ -35,11 +35,11 @@ const char *kRawRequest =
 
 int main() {
 
-  auto c = http::web::prefix_comparator<std::string>{};
+  auto c = empty_d::radix_tree::prefix_comparator<std::string>{};
   auto [i1, i2] = c.FindCommonPrefix("/test/123", "/test/{test}");
   std::cout << i1 << " " << i2 << std::endl;
 
-  auto map = http::web::radix_tree_map<std::string, char>{};
+  auto map = empty_d::radix_tree::radix_tree_map<std::string, char>{};
 
   map.insert({"/test/{test}", "test"});
   map.insert({"/test/{test}/git", "test2"});
