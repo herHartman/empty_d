@@ -293,7 +293,7 @@ private:
   }
 
 public:
-  std::optional<mapped_type> lookup(const key_type &key) {
+  std::optional<mapped_type> lookup(const key_type &key) const {
     node_type *traverse_node = root_.minor;
     std::size_t elements_found = 0;
     std::string key_view = key;

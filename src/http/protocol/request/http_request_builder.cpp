@@ -1,4 +1,6 @@
 #include "http_request_builder.h"
+#include "http/url_dispatcher.hpp"
+#include <optional>
 
 namespace empty_d::http::request {
 
@@ -10,7 +12,16 @@ void HttpRequestBuilder::AppendHttpVersion(std::string http_version) {}
 
 void HttpRequestBuilder::AppendMethod(http::HttpMethods method) {}
 
-void HttpRequestBuilder::AppendPath(std::string path) {}
+void HttpRequestBuilder::AppendPath(const std::string &path) {
+  path_ = path;
+  std::optional<Resource> resource = url_dispatcher_->GetResource(path);
+  if (resource) {
+    const auto &path_args = resource->GetPathArgs();
+    for (auto &path_args : path_args) {
+        
+    }
+  }
+}
 
 void HttpRequestBuilder::AppendQuery(
     std::unordered_map<std::string, std::string> query) {}

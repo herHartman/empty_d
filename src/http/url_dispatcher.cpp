@@ -50,8 +50,8 @@ void UrlDispatcher::AddHandler(const HttpHandler &handler, HttpMethods method,
       }
       current_path_start_pos += path_segment.size();
     }
-    
-    Resource new_resource{path};
+
+    Resource new_resource{path, std::move(args)};
     new_resource.AddHandler(handler, method);
   }
 }
@@ -63,6 +63,11 @@ HttpHandler UrlDispatcher::GetHandler(const std::string &path,
     return resource->GetHandler(method);
   }
   return nullptr;
+}
+
+std::optional<Resource>
+UrlDispatcher::GetResource(const std::string &path) const {
+  return routes_.lookup(path);
 }
 
 } // namespace empty_d::http
