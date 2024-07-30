@@ -17,7 +17,7 @@ public:
   using iterator = Iterator;
   using const_iterator = ConstIterator;
 
-  class BasicHeaders {
+  struct BasicHeaders {
     inline static constexpr char kAccept[] = "Accept";
     inline static constexpr char kAcceptCharset[] = "Accept-Charset";
     inline static constexpr char kAcceptEncoding[] = "Accept-Encoding";
@@ -29,13 +29,15 @@ public:
     inline static constexpr char kAuthorization[] = "Authorization";
     inline static constexpr char kCache_control[] = "Cache-Control";
     inline static constexpr char kConnection[] = "Connection";
+    inline static constexpr char kContentLength[] = "Content-Length";
+    inline static constexpr char kHost[] = "Host";
   };
 
-  void Set(HeaderKey key, HeaderValue value);
-  void Set(HeaderKey key, std::vector<HeaderValue> values);
+  void Set(const HeaderKey &key, HeaderValue value);
+  void Set(const HeaderKey &key, std::vector<HeaderValue> values);
 
-  void Add(HeaderKey key, HeaderValue value);
-  void Add(HeaderKey key, std::vector<HeaderValue> values);
+  void Add(const HeaderKey &key, HeaderValue value);
+  void Add(const HeaderKey &key, std::vector<HeaderValue> values);
 
   void SetBasicAuth(const std::string &username, const std::string &password);
   void SetBearerAuth(const std::string &token);
@@ -47,7 +49,8 @@ public:
   void SetLocation(const std::string &location);
   void SetOrigin(const std::string &origin);
 
-  std::string& GetContentLength();
+  size_t GetContentLength();
+  std::string &GetHost();
 
   std::vector<HeaderValue> &GetHeaderValues(const HeaderKey &key);
   std::string FormatHeaders() const;

@@ -1,5 +1,6 @@
 #include "http_request_builder.h"
 #include "http/url_dispatcher.hpp"
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -67,7 +68,17 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
     throw std::runtime_error("need path or version");
   }
 
-  return HttpRequest {}
+  size_t content_length = headers_.GetContentLength();
+  std::string &host = headers_.GetHost();
+  return HttpRequest{content_length,
+                     method_.value(),
+                     std::move(headers_),
+                     host,
+                     std::move(http_version_.value()),
+                     std::shared_ptr<HttpBodyStreamReader>(nullptr),
+                     std::move(path_.value()),
+                     std::move(query_),
+                     std::move(path_args_)};
 }
 
 } // namespace empty_d::http::request
