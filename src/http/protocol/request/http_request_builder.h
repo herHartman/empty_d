@@ -17,12 +17,13 @@ public:
 
   void AppendPath(const std::string &path);
   void AppendMethod(http::HttpMethods method);
-  void AppendHttpVersion(std::string http_version);
+  void AppendHttpVersion(const std::string &http_version);
   void AppendHeaders(HttpHeaders headers);
-  void AppendHeaderField(std::string header_field);
-  void AppendHeaderValue(std::string header_value);
-  void AppendQuery(std::unordered_map<std::string, std::string> query);
-  void AppendHeader(std::string, std::string);
+  void AppendHeaderField(const std::string &header_field);
+  void AppendHeaderValue(const std::string &header_value);
+  void AppendQuery(const std::unordered_map<std::string, std::string> &query);
+  void AppendHeader(const std::string &header_field,
+                    const std::string &header_value);
 
   HttpRequest BuildRequest();
 
@@ -35,6 +36,8 @@ private:
   HttpHeaders headers_;
   std::shared_ptr<UrlDispatcher> url_dispatcher_;
   std::optional<Resource> resource_;
+
+  std::optional<std::string> current_header_field_;
 };
 
 }; // namespace empty_d::http::request

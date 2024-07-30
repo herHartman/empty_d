@@ -1,7 +1,3 @@
-//
-// Created by chopk on 11.04.24.
-//
-
 #include "http_headers.h"
 #include <sstream>
 #include <utility>
@@ -41,9 +37,14 @@ void HttpHeaders::Add(HeaderKey key, std::vector<HeaderValue> values) {
   }
 }
 
+std::vector<HeaderValue> &HttpHeaders::GetHeaderValues(const HeaderKey &key) {
+  return headers_[key];
+}
+
 std::string HttpHeaders::FormatHeaders() const {
   std::stringstream buf;
   for (const auto &header : headers_) {
+    
   }
   buf << "\r\n";
   return buf.str();

@@ -13,8 +13,12 @@ using namespace boost;
 namespace empty_d::http::request {
 class HttpRequest {
 public:
-  explicit HttpRequest(std::shared_ptr<HttpBodyStreamReader> stream_reader)
-      : stream_reader_(std::move(stream_reader)) {}
+  // explicit HttpRequest(
+  //   size_t content_length, const std::string& content_type,
+  //   HttpMethods http_method, 
+  //   std::shared_ptr<HttpBodyStreamReader> stream_reader
+  // )
+  //     : stream_reader_(std::move(stream_reader)) {}
 
   template <is_serializable T> awaitable<T> ReadBody() {
     co_return typename T::serializer{}.deserialize(co_await ReadJson());

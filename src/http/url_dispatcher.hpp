@@ -19,7 +19,6 @@ struct PathArg {
 
 class Resource {
 public:
-
   explicit Resource(std::string path_, std::vector<PathArg> expected_args_)
       : path_(std::move(path_)), expected_args_{std::move(expected_args_)} {}
 
@@ -29,7 +28,7 @@ public:
   [[nodiscard]] const std::vector<PathArg> &GetPathArgs() const {
     return expected_args_;
   }
-
+  
 private:
   std::string path_;
   std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> handlers_{
@@ -54,7 +53,7 @@ public:
   GetResource(const std::string &path) const;
 
 private:
-  Routes routes_;
+  Routes routes_{};
 
   static std::vector<std::string> SplitBySlash(const std::string &path);
   static bool IsDynamicPathPart(const std::string &path_part);

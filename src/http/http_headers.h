@@ -11,6 +11,12 @@ typedef std::unordered_map<HeaderKey, std::vector<HeaderValue>> HeaderValues;
 
 class HttpHeaders {
 public:
+  using Iterator = HeaderValues::iterator;
+  using ConstIterator = HeaderValues::const_iterator;
+
+  using iterator = Iterator;
+  using const_iterator = ConstIterator;
+
   class BasicHeaders {
     inline static constexpr char kAccept[] = "Accept";
     inline static constexpr char kAcceptCharset[] = "Accept-Charset";
@@ -41,9 +47,13 @@ public:
   void SetLocation(const std::string &location);
   void SetOrigin(const std::string &origin);
 
+  std::string& GetContentLength();
+
+  std::vector<HeaderValue> &GetHeaderValues(const HeaderKey &key);
   std::string FormatHeaders() const;
 
 private:
-  HeaderValues headers_;
+  HeaderValues headers_{};
 };
+
 } // namespace empty_d::http
