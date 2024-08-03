@@ -8,7 +8,7 @@ namespace empty_d::http {
 
 void HttpHeaders::Set(const HeaderKey &key, HeaderValue value) {
   headers_.erase(key);
-  std::vector<HeaderKey> values{std::move(value)};
+  std::vector values{std::move(value)};
   values.reserve(1);
   headers_[key] = values;
 }
@@ -47,9 +47,8 @@ size_t HttpHeaders::GetContentLength() {
   if (!content_length_vec.empty()) {
     auto &content_legnth_str = content_length_vec.back();
     return std::stoi(content_legnth_str);
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 std::string &HttpHeaders::GetHost() {

@@ -6,6 +6,7 @@ namespace empty_d::http {
 class HttpResponse {
 public:
   HttpResponse() = default;
+
 private:
   HttpHeaders headers_;
 };

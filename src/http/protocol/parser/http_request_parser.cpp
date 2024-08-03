@@ -130,7 +130,7 @@ int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
         break;
       }
     }
-    request_builder_.AppendQuery(std::move(query));
+    request_builder_.AppendQuery(query);
   }
 
   return 0;

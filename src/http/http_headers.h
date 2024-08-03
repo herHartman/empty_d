@@ -18,19 +18,19 @@ public:
   using const_iterator = ConstIterator;
 
   struct BasicHeaders {
-    inline static constexpr char kAccept[] = "Accept";
-    inline static constexpr char kAcceptCharset[] = "Accept-Charset";
-    inline static constexpr char kAcceptEncoding[] = "Accept-Encoding";
-    inline static constexpr char kacceptLanguage[] = "Accept-Language";
-    inline static constexpr char kAcceptRanges[] = "Accept-Ranges";
-    inline static constexpr char kAge[] = "Age";
-    inline static constexpr char kAllow[] = "Allow";
-    inline static constexpr char kAlternates[] = "Alternates";
-    inline static constexpr char kAuthorization[] = "Authorization";
-    inline static constexpr char kCache_control[] = "Cache-Control";
-    inline static constexpr char kConnection[] = "Connection";
-    inline static constexpr char kContentLength[] = "Content-Length";
-    inline static constexpr char kHost[] = "Host";
+    static constexpr char kAccept[] = "Accept";
+    static constexpr char kAcceptCharset[] = "Accept-Charset";
+    static constexpr char kAcceptEncoding[] = "Accept-Encoding";
+    static constexpr char kacceptLanguage[] = "Accept-Language";
+    static constexpr char kAcceptRanges[] = "Accept-Ranges";
+    static constexpr char kAge[] = "Age";
+    static constexpr char kAllow[] = "Allow";
+    static constexpr char kAlternates[] = "Alternates";
+    static constexpr char kAuthorization[] = "Authorization";
+    static constexpr char kCache_control[] = "Cache-Control";
+    static constexpr char kConnection[] = "Connection";
+    static constexpr char kContentLength[] = "Content-Length";
+    static constexpr char kHost[] = "Host";
   };
 
   void Set(const HeaderKey &key, HeaderValue value);

@@ -19,7 +19,11 @@ void HttpBodyStreamReader::SetEof() {
   read_lock_->try_send(boost::system::error_code{}, 0);
 }
 
-awaitable<std::vector<char>> HttpBodyStreamReader::ReadAny() {
+awaitable<std::string> HttpBodyStreamReader::ReadAny() {
+  if (bucket_.empty()) {
+    
+  }
+
   while (buffer_.empty() && !eof_) {
     co_await read_lock_->async_receive(boost::asio::use_awaitable);
   }

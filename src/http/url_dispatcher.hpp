@@ -47,7 +47,7 @@ public:
 
   void AddHandler(const HttpHandler &handler, HttpMethods method,
                   const std::string &path);
-  HttpHandler GetHandler(const std::string &path, HttpMethods method);
+  HttpHandler GetHandler(const std::string &path, const HttpMethods method);
 
   [[nodiscard]] std::optional<Resource>
   GetResource(const std::string &path) const;

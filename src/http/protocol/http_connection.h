@@ -2,7 +2,6 @@
 
 #include "http/protocol/parser/http_request_parser.hpp"
 #include "http/transport.h"
-#include <array>
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
 #include <memory>
@@ -20,7 +19,7 @@ public:
   }
 
   boost::asio::awaitable<void> Handle();
-
+  
   void ConnectionMade() {}
 
   void ConnectionLost() {}
