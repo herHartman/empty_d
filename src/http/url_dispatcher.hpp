@@ -10,7 +10,8 @@
 
 namespace empty_d::http {
 
-using HttpHandler = std::function<HttpResponse(request::HttpRequest)>;
+using HttpHandler =
+    std::function<awaitable<HttpResponse>(request::HttpRequest)>;
 
 struct PathArg {
   std::string arg_name;
@@ -28,7 +29,7 @@ public:
   [[nodiscard]] const std::vector<PathArg> &GetPathArgs() const {
     return expected_args_;
   }
-  
+
 private:
   std::string path_;
   std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> handlers_{

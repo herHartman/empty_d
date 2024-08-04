@@ -1,4 +1,5 @@
 #include "http/protocol/http_connection.h"
+#include "http/http_response.hpp"
 #include "http/url_dispatcher.hpp"
 #include <algorithm>
 #include <boost/asio/awaitable.hpp>
@@ -16,6 +17,7 @@ awaitable<void> HttpConnection::HandleRequest(HttpRequest &request) {
   }
 
   HttpHandler handler = resource->GetHandler(request.GetMethod());
+  HttpResponse response = co_await handler(request);
 }
 
 awaitable<void> HttpConnection::Handle() {
@@ -63,6 +65,7 @@ awaitable<void> HttpConnection::Handle() {
     read_buffer_.commit(read_size);
   }
 
+  co_await response_awaiter_.async_receive();
   // тут дожидаемся ответа
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace empty_d::http::web {
+namespace empty_d::http {
 enum HttpStatus {
   HTTP_OK = 200,
   HTTP_CREATED = 201,
