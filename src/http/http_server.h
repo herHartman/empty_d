@@ -2,6 +2,7 @@
 
 #include "http/protocol/http_connection.h"
 #include <boost/asio.hpp>
+#include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/detached.hpp>
@@ -25,27 +26,6 @@ using HttpConnections =
     std::unordered_map<uuids::uuid, std::shared_ptr<HttpConnection>,
                        boost::hash<boost::uuids::uuid>>;
 
-class AcceptConnectionsOp {
-public:
-  explicit AcceptConnectionsOp(tcp::acceptor &acceptor,
-                               HttpConnections &connections)
-      : acceptor_(acceptor), connections_(connections) {}
-
-  template <class Self> auto operator()(Self &self) -> awaitable<void> {
-    auto socket = co_await acceptor_.async_accept(boost::asio::use_awaitable);
-    auto new_connection = std::make_shared<HttpConnection>(
-        protocol::parser::HttpRequestParser{}, std::move(socket));
-    connections_[boost::uuids::random_generator()()] = new_connection;
-    boost::asio::co_spawn(acceptor_.get_executor(), new_connection->Handle(),
-                          boost::asio::detached);
-    co_return;
-  }
-
-private:
-  tcp::acceptor &acceptor_;
-  HttpConnections &connections_;
-};
-
 class HttpServer {
 public:
   explicit HttpServer(boost::asio::io_context &io_context, std::string address,
@@ -65,14 +45,24 @@ public:
     acceptor_.listen();
     is_running_ = true;
     return boost::asio::async_compose<CompletionToken, void()>(
-        AcceptConnectionsOp{acceptor_, http_connections_},
+        [&](auto &self) -> boost::asio::awaitable<void> {
+          for (;;) {
+            auto socket =
+                co_await acceptor_.async_accept(boost::asio::use_awaitable);
+            auto new_connection = std::make_shared<HttpConnection>(
+                protocol::parser::HttpRequestParser{}, std::move(socket));
+            AddNewConnection(new_connection);
+            boost::asio::co_spawn(acceptor_.get_executor(),
+                                  new_connection->Handle(),
+                                  boost::asio::detached);
+          }
+          self.complete();
+        },
         std::forward<CompletionToken>(token), acceptor_);
   }
   void ShutDown();
 
 private:
-  friend class AcceptConnectionsOp;
-
   tcp::acceptor acceptor_;
   std::size_t requests_count_;
   bool is_running_;

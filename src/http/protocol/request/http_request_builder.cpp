@@ -1,4 +1,5 @@
 #include "http_request_builder.h"
+#include "http/protocol/http_body_stream_reader.h"
 #include "http/url_dispatcher.hpp"
 #include <memory>
 #include <optional>
@@ -56,6 +57,12 @@ void HttpRequestBuilder::AppendHeader(const std::string &header_field,
   headers_.Add(header_field, header_value);
 }
 
+void HttpRequestBuilder::AppendBody(const std::string &body) {
+  if (!body_reader_) {
+    body_reader_ = std::make_shared<request::HttpBodyStreamReader>();
+  }
+}
+
 HttpRequest HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
@@ -79,6 +86,10 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
                      std::move(path_.value()),
                      std::move(query_),
                      std::move(path_args_)};
+}
+
+std::optional<Resource> HttpRequestBuilder::GetResource() const {
+  return resource_;
 }
 
 } // namespace empty_d::http::request

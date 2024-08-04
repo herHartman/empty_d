@@ -46,7 +46,7 @@ public:
     if (buffer_.empty()) {
       while (true) {
         buffer_.reserve(GetContentLength());
-        std::vector<char> chunk = co_await stream_reader_->ReadAny();
+        std::string chunk = co_await stream_reader_->ReadAny();
         if (chunk.empty())
           break;
         buffer_.assign(chunk.begin(), chunk.end());
@@ -66,6 +66,7 @@ public:
   }
 
   const std::vector<std::string> &GetHeaders(std::string_view key);
+  
 
 private:
   std::size_t content_length_;

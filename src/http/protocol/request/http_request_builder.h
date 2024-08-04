@@ -1,6 +1,7 @@
 #pragma once
 
 #include "http/http_headers.h"
+#include "http/protocol/http_body_stream_reader.h"
 #include "http/protocol/http_methods.h"
 #include "http/url_dispatcher.hpp"
 #include "http_request.h"
@@ -13,7 +14,7 @@ namespace empty_d::http::request {
 class HttpRequestBuilder {
 public:
   explicit HttpRequestBuilder(std::shared_ptr<UrlDispatcher> url_dispatcher)
-      : url_dispatcher_(std::move(url_dispatcher)) {}
+      : url_dispatcher_{std::move(url_dispatcher)}, body_reader_{nullptr} {}
 
   void AppendPath(const std::string &path);
   void AppendMethod(http::HttpMethods method);
@@ -24,9 +25,11 @@ public:
   void AppendQuery(const std::unordered_map<std::string, std::string> &query);
   void AppendHeader(const std::string &header_field,
                     const std::string &header_value);
+  void AppendBody(const std::string& body);
 
   HttpRequest BuildRequest();
 
+  std::optional<Resource> GetResource() const;
 private:
   std::optional<std::string> path_;
   std::optional<std::string> http_version_;
@@ -36,7 +39,7 @@ private:
   HttpHeaders headers_;
   std::shared_ptr<UrlDispatcher> url_dispatcher_;
   std::optional<Resource> resource_;
-
+  std::shared_ptr<request::HttpBodyStreamReader> body_reader_;
   std::optional<std::string> current_header_field_;
 };
 

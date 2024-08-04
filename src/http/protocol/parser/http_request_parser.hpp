@@ -3,19 +3,19 @@
 #include "http/protocol/parser/http_parser/http_parser.h"
 #include "http/protocol/request/http_request.h"
 #include "http/protocol/request/http_request_builder.h"
+#include "http/url_dispatcher.hpp"
 
-using empty_d::http::request::HttpRequestBuilder;
 using empty_d::http::request::HttpRequest;
+using empty_d::http::request::HttpRequestBuilder;
 
 namespace empty_d::http::protocol::parser {
 class HttpRequestParser {
 public:
   HttpRequestParser();
 
-  enum class ParseQueryState {
-    QUERY_NAME,
-    QUERY_VALUE
-  };
+  enum class ParseQueryState { QUERY_NAME, QUERY_VALUE };
+
+  enum class ParseState { INITED, IN_PROGRESS, ERROR, COMPLETE };
 
   int OnMessageBeginImpl(http_parser *parser);
   int OnUrlImpl(http_parser *parser, const char *data, size_t lenght);
@@ -44,15 +44,20 @@ public:
   static int OnChunkHeader(http_parser *parser);
   static int OnChunkComplete(http_parser *parser);
 
+  void Parse(const char *data, size_t length);
 
-  HttpRequest Parse(const char* data, size_t length);
-  
+  bool ParseComplete() const;
+
+  HttpRequest BuildRequest();
+
+  std::optional<Resource> GetResource() const;
+
 private:
   static const http_parser_settings settings_;
   http_parser parser_;
   http_parser_url url_parser_;
   HttpRequestBuilder request_builder_;
-
+  ParseState state_;
   std::string_view current_header_field;
 };
 } // namespace empty_d::http::protocol::parser

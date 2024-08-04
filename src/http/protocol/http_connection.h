@@ -18,8 +18,8 @@ public:
       : request_parser_(std::move(request_parser)), socket_(std::move(socket)) {
   }
 
-  boost::asio::awaitable<void> Handle();
-  
+  awaitable<void> Handle();
+
   void ConnectionMade() {}
 
   void ConnectionLost() {}
@@ -31,7 +31,7 @@ private:
   boost::asio::dynamic_string_buffer<char, std::char_traits<char>,
                                      std::allocator<char>>
       read_buffer_{bucket_};
-  awaitable<void> handle_request(http::request::HttpRequest &request) {}
-  struct HandleConnectionOp {};
+
+  awaitable<void> HandleRequest(HttpRequest& request);
 };
 } // namespace empty_d::http
