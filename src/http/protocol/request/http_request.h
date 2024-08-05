@@ -66,7 +66,6 @@ public:
   }
 
   const std::vector<std::string> &GetHeaders(std::string_view key);
-  
 
 private:
   std::size_t content_length_;

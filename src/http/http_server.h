@@ -44,6 +44,7 @@ public:
     acceptor_.bind(endpoint);
     acceptor_.listen();
     is_running_ = true;
+
     return boost::asio::async_compose<CompletionToken, void()>(
         [&](auto &self) -> boost::asio::awaitable<void> {
           for (;;) {

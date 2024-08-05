@@ -56,7 +56,7 @@ void UrlDispatcher::AddHandler(const HttpHandler &handler, HttpMethods method,
 }
 
 HttpHandler UrlDispatcher::GetHandler(const std::string &path,
-                                      const HttpMethods method) {
+                                      HttpMethods method) {
   if (std::optional<Resource> resource = routes_.lookup(path)) {
     return resource->GetHandler(method);
   }

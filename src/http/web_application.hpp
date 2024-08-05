@@ -7,8 +7,6 @@
 namespace empty_d::http {
 class WebApplication {
 public:
-  
-
 private:
   std::unique_ptr<HttpServer> server_;
   std::shared_ptr<UrlDispatcher> url_dispatcher_;

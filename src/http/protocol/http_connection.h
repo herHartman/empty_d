@@ -17,8 +17,8 @@ class HttpConnection {
 public:
   explicit HttpConnection(protocol::parser::HttpRequestParser request_parser,
                           tcp::socket socket)
-      : request_parser_(std::move(request_parser)), socket_(std::move(socket)) {
-  }
+      : request_parser_(std::move(request_parser)), socket_(std::move(socket)),
+        write_buffer_{} {}
 
   awaitable<void> Handle();
 
@@ -33,7 +33,9 @@ private:
   boost::asio::dynamic_string_buffer<char, std::char_traits<char>,
                                      std::allocator<char>>
       read_buffer_{bucket_};
-  channel<void(boost::system::error_code, std::size_t)> response_awaiter_{socket_.get_executor()};
+  channel<void(boost::system::error_code, std::size_t)> response_awaiter_{
+      socket_.get_executor()};
   awaitable<void> HandleRequest(HttpRequest &request);
+  std::string write_buffer_;
 };
 } // namespace empty_d::http

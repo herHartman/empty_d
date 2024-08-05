@@ -8,6 +8,8 @@ class HttpResponse {
 public:
   explicit HttpResponse(HttpStatus status) : status_(status){};
 
+  std::string SerializeResponse();
+
 private:
   HttpHeaders headers_;
   std::string body_;

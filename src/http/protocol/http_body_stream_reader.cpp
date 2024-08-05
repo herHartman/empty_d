@@ -1,5 +1,4 @@
 #include "http_body_stream_reader.h"
-#include <cstring>
 
 namespace empty_d::http::request {
 

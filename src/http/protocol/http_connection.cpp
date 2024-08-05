@@ -3,6 +3,7 @@
 #include "http/url_dispatcher.hpp"
 #include <algorithm>
 #include <boost/asio/awaitable.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -18,6 +19,8 @@ awaitable<void> HttpConnection::HandleRequest(HttpRequest &request) {
 
   HttpHandler handler = resource->GetHandler(request.GetMethod());
   HttpResponse response = co_await handler(request);
+  write_buffer_.append(response.SerializeResponse());
+  response_awaiter_.try_send(0, 0);
 }
 
 awaitable<void> HttpConnection::Handle() {
@@ -65,7 +68,12 @@ awaitable<void> HttpConnection::Handle() {
     read_buffer_.commit(read_size);
   }
 
-  co_await response_awaiter_.async_receive();
+  co_await response_awaiter_.async_receive(boost::asio::use_awaitable);
+
+  co_await socket_.async_send(boost::asio::dynamic_buffer(write_buffer_),
+                              use_awaitable);
+
+  socket_.close();
   // тут дожидаемся ответа
 }
 
