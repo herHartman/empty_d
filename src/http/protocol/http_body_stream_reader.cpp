@@ -1,15 +1,14 @@
 #include "http_body_stream_reader.h"
-#include <cstring>
 
 namespace empty_d::http::request {
 
 awaitable<std::string> HttpBodyStreamReader::Text() { co_return std::string(); }
 
-awaitable<void> HttpBodyStreamReader::Write(const char *data, std::size_t len) {
-  if (buffer_.capacity() < (buffer_.size() + len)) {
+awaitable<void> HttpBodyStreamReader::Write(std::string data) {
+  if (buffer_.capacity() < (buffer_.size() + data.length())) {
     buffer_.reserve(2 * buffer_.capacity());
   }
-  std::copy(data, data + len, std::back_inserter(buffer_));
+  buffer_.append(data);
   read_lock_->try_send(boost::system::error_code{}, 0);
   co_return;
 }
@@ -19,12 +18,11 @@ void HttpBodyStreamReader::SetEof() {
   read_lock_->try_send(boost::system::error_code{}, 0);
 }
 
-awaitable<std::vector<char>> HttpBodyStreamReader::ReadAny() {
+awaitable<std::string> HttpBodyStreamReader::ReadAny() {
   while (buffer_.empty() && !eof_) {
     co_await read_lock_->async_receive(boost::asio::use_awaitable);
   }
-  std::vector<char> result = std::move(buffer_);
-  buffer_.reserve(4096);
+  std::string result = std::move(buffer_);
   co_return std::move(result);
 }
 } // namespace empty_d::http::request

@@ -1,7 +1,10 @@
 #include "http_request_parser.hpp"
 #include "http/protocol/parser/http_parser/http_parser.h"
+#include "http/url_dispatcher.hpp"
 #include <cstddef>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -24,7 +27,9 @@ const http_parser_settings HttpRequestParser::settings_ = []() {
 }();
 
 HttpRequestParser::HttpRequestParser()
-    : parser_{}, url_parser_{}, request_builder_{}, current_header_field{} {
+    : parser_{}, url_parser_{},
+      request_builder_{std::make_shared<UrlDispatcher>()},
+      current_header_field{}, state_{ParseState::INITED} {
   http_parser_init(&parser_, HTTP_REQUEST);
   http_parser_url_init(&url_parser_);
   parser_.data = this;
@@ -75,7 +80,10 @@ int HttpRequestParser::OnHeadersComplete(http_parser *parser) {
   return http_request_parser->OnHeadersCompleteImpl(parser);
 }
 
-int HttpRequestParser::OnMessageBeginImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::OnMessageBeginImpl(http_parser *parser) {
+  state_ = ParseState::IN_PROGRESS;
+  return 0;
+}
 
 int HttpRequestParser::OnStatusImpl(http_parser *parser, const char *data,
                                     size_t lenght) {
@@ -83,7 +91,9 @@ int HttpRequestParser::OnStatusImpl(http_parser *parser, const char *data,
   return 0;
 }
 
-int HttpRequestParser::OnMessageCompleteImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::OnMessageCompleteImpl(http_parser *parser) {
+  state_ = ParseState::COMPLETE;
+}
 
 int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
                                  size_t len) {
@@ -130,7 +140,7 @@ int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
         break;
       }
     }
-    request_builder_.AppendQuery(std::move(query));
+    request_builder_.AppendQuery(query);
   }
 
   return 0;
@@ -161,21 +171,31 @@ int HttpRequestParser::OnChunkComplete(http_parser *parser) {
   return http_request_parser->OnChunkCompleteImpl(parser);
 }
 
-int HttpRequestParser::OnHeadersCompleteImpl(http_parser *parser) {}
+int HttpRequestParser::OnHeadersCompleteImpl(http_parser *parser) { return 0; }
 
 int HttpRequestParser::OnMessageBodyImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  std::cout << std::string_view(data, data + len) << std::endl;
-  return 0;
+  request_builder_.AppendBody(std::string(data, data[len]));
 }
 
 int HttpRequestParser::OnChunkHeaderImpl(http_parser *parser) { return 0; }
 
 int HttpRequestParser::OnChunkCompleteImpl(http_parser *parser) { return 0; }
 
-HttpRequest HttpRequestParser::Parse(const char *data, size_t length) {
+void HttpRequestParser::Parse(const char *data, size_t length) {
   size_t nparsed = http_parser_execute(&parser_, &settings_, data, length);
+}
+
+bool HttpRequestParser::ParseComplete() const {
+  return state_ == ParseState::COMPLETE;
+}
+
+HttpRequest HttpRequestParser::BuildRequest() {
   return request_builder_.BuildRequest();
+}
+
+std::optional<Resource> HttpRequestParser::GetResource() const {
+  return request_builder_.GetResource();
 }
 
 } // namespace empty_d::http::protocol::parser

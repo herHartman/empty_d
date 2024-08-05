@@ -57,7 +57,7 @@ int main() {
   // boost::asio::io_context io_context{};
   // boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
   // signals.async_wait([&](auto, auto) { io_context.stop(); });
- 
+
   // http::web::web_application application =
   // http::web::web_application(io_context, 8080);
   // application.add_route("/auth/guest", &handler,

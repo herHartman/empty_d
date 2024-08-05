@@ -36,10 +36,10 @@ bool UrlDispatcher::IsDynamicPathPart(const std::string &path_part) {
 
 void UrlDispatcher::AddHandler(const HttpHandler &handler, HttpMethods method,
                                const std::string &path) {
-  std::optional<Resource> resource = routes_.lookup(path);
-  if (resource) {
+  if (std::optional<Resource> resource = routes_.lookup(path)) {
     resource->AddHandler(handler, method);
   } else {
+
     std::vector<std::string> splitting_path = UrlDispatcher::SplitBySlash(path);
     std::vector<PathArg> args;
     size_t current_path_start_pos = 1;
@@ -50,7 +50,6 @@ void UrlDispatcher::AddHandler(const HttpHandler &handler, HttpMethods method,
       }
       current_path_start_pos += path_segment.size();
     }
-
     Resource new_resource{path, std::move(args)};
     new_resource.AddHandler(handler, method);
   }
@@ -58,8 +57,7 @@ void UrlDispatcher::AddHandler(const HttpHandler &handler, HttpMethods method,
 
 HttpHandler UrlDispatcher::GetHandler(const std::string &path,
                                       HttpMethods method) {
-  std::optional<Resource> resource = routes_.lookup(path);
-  if (resource) {
+  if (std::optional<Resource> resource = routes_.lookup(path)) {
     return resource->GetHandler(method);
   }
   return nullptr;

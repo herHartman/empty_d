@@ -1,5 +1,7 @@
 #include "http_request_builder.h"
+#include "http/protocol/http_body_stream_reader.h"
 #include "http/url_dispatcher.hpp"
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -55,6 +57,12 @@ void HttpRequestBuilder::AppendHeader(const std::string &header_field,
   headers_.Add(header_field, header_value);
 }
 
+void HttpRequestBuilder::AppendBody(const std::string &body) {
+  if (!body_reader_) {
+    body_reader_ = std::make_shared<request::HttpBodyStreamReader>();
+  }
+}
+
 HttpRequest HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
@@ -67,7 +75,21 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
     throw std::runtime_error("need path or version");
   }
 
-  return HttpRequest {}
+  size_t content_length = headers_.GetContentLength();
+  std::string &host = headers_.GetHost();
+  return HttpRequest{content_length,
+                     method_.value(),
+                     std::move(headers_),
+                     host,
+                     std::move(http_version_.value()),
+                     std::shared_ptr<HttpBodyStreamReader>(nullptr),
+                     std::move(path_.value()),
+                     std::move(query_),
+                     std::move(path_args_)};
+}
+
+std::optional<Resource> HttpRequestBuilder::GetResource() const {
+  return resource_;
 }
 
 } // namespace empty_d::http::request
