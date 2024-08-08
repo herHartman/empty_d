@@ -11,8 +11,8 @@ using empty_d::http::request::HttpRequestBuilder;
 namespace empty_d::http::protocol::parser {
 class HttpRequestParser {
 public:
-  HttpRequestParser();
-
+  explicit HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher);
+  
   enum class ParseQueryState { QUERY_NAME, QUERY_VALUE };
 
   enum class ParseState { INITED, IN_PROGRESS, ERROR, COMPLETE };

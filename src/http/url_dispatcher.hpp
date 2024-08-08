@@ -11,7 +11,7 @@
 namespace empty_d::http {
 
 using HttpHandler =
-    std::function<awaitable<HttpResponse>(request::HttpRequest)>;
+    std::function<awaitable<HttpResponse>(request::HttpRequest &)>;
 
 struct PathArg {
   std::string arg_name;

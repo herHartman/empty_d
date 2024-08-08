@@ -26,9 +26,9 @@ const http_parser_settings HttpRequestParser::settings_ = []() {
   return settings;
 }();
 
-HttpRequestParser::HttpRequestParser()
-    : parser_{}, url_parser_{},
-      request_builder_{std::make_shared<UrlDispatcher>()},
+HttpRequestParser::HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher)
+    : parser_{},  url_parser_{},
+      request_builder_{std::move(url_dispatcher)},
       current_header_field{}, state_{ParseState::INITED} {
   http_parser_init(&parser_, HTTP_REQUEST);
   http_parser_url_init(&url_parser_);

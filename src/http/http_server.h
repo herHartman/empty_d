@@ -1,6 +1,7 @@
 #pragma once
 
 #include "http/protocol/http_connection.h"
+#include "http/url_dispatcher.hpp"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -29,9 +30,12 @@ using HttpConnections =
 class HttpServer {
 public:
   explicit HttpServer(boost::asio::io_context &io_context, std::string address,
-                      std::string port, std::size_t max_requests = 1000)
+                      std::string port,
+                      std::shared_ptr<UrlDispatcher> url_dispatcher,
+                      std::size_t max_requests = 1000)
       : acceptor_(io_context), requests_count_(0), is_running_(false),
         max_requests_(max_requests), port_(std::move(port)),
+        url_dispatcher_(std::move(url_dispatcher)),
         address_(std::move(address)),
         uuid_generator_(new uuids::random_generator()) {}
 
@@ -51,7 +55,7 @@ public:
             auto socket =
                 co_await acceptor_.async_accept(boost::asio::use_awaitable);
             auto new_connection = std::make_shared<HttpConnection>(
-                protocol::parser::HttpRequestParser{}, std::move(socket));
+                protocol::parser::HttpRequestParser(url_dispatcher_), std::move(socket));
             AddNewConnection(new_connection);
             boost::asio::co_spawn(acceptor_.get_executor(),
                                   new_connection->Handle(),
@@ -72,6 +76,7 @@ private:
   std::string port_;
   std::unique_ptr<uuids::random_generator> uuid_generator_;
   HttpConnections http_connections_{};
+  std::shared_ptr<UrlDispatcher> url_dispatcher_;
 
   void AddNewConnection(std::shared_ptr<HttpConnection> connection);
 };

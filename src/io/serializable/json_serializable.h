@@ -16,4 +16,3 @@ public:
 template <typename T>
 concept is_serializable =
     std::is_base_of_v<json_serializable<T, typename T::serializer>, T>;
-

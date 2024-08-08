@@ -9,6 +9,15 @@ public:
   explicit HttpResponse(HttpStatus status) : status_(status){};
 
   std::string SerializeResponse();
+  
+  [[nodiscard]] HttpStatus GetStatusCode() const;
+  void SetStatucCode(HttpStatus status);
+
+  [[nodiscard]] HttpHeaders& GetHeaders();
+  
+  bool SetHeader(std::string name, std::string value);
+  bool SetHeader(std::string_view name, std::string value);
+  
 
 private:
   HttpHeaders headers_;
