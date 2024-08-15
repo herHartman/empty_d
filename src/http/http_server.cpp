@@ -7,12 +7,11 @@
 
 namespace empty_d::http {
 
-
 void HttpServer::ShutDown() {
   acceptor_.close();
   is_running_ = false;
 }
-  
+
 void HttpServer::AddNewConnection(std::shared_ptr<HttpConnection> connection) {
   auto uuid = boost::uuids::random_generator()();
   http_connections_[uuid] = std::move(connection);
