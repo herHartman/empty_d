@@ -4,7 +4,6 @@
 #include <condition_variable>
 #include <deque>
 #include <future>
-#include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -26,17 +25,17 @@ class TaskWrapper {
   template <typename F>
   struct ImplType : public ImplBase {
     F function_;
-    ImplType(F&& function) : function_(std::move(function)) {}
-    void Call() { function_(); }
+    explicit ImplType(F&& function) : function_(std::move(function)) {}
+    void Call() override { function_(); }
   };
 
  public:
   template <typename F>
-  TaskWrapper(F&& function) : impl_(new ImplType<F>(std::move(function))) {}
-
+  explicit TaskWrapper(F& function) : impl_(new ImplType<F>(function)) {}
+  
   TaskWrapper() = default;
-  TaskWrapper(TaskWrapper&& other) : impl_(std::move(other.impl_)) {}
-  TaskWrapper& operator=(TaskWrapper&& other) {
+  TaskWrapper(TaskWrapper&& other)  noexcept : impl_(std::move(other.impl_)) {}
+  TaskWrapper& operator=(TaskWrapper&& other)  noexcept {
     impl_ = std::move(other.impl_);
     return *this;
   }
