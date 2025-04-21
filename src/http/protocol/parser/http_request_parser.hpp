@@ -8,7 +8,7 @@
 using empty_d::http::request::HttpRequest;
 using empty_d::http::request::HttpRequestBuilder;
 
-namespace empty_d::http::protocol::parser {
+namespace empty_d { namespace http { namespace protocol { namespace parser {
 class HttpRequestParser {
 public:
   explicit HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher);
@@ -48,9 +48,9 @@ public:
 
   bool ParseComplete() const;
 
-  HttpRequest BuildRequest();
+  std::pair<HttpRequest, HttpHandler> BuildRequest();
 
-  std::optional<Resource> GetResource() const;
+  boost::optional<Resource> GetResource() const;
 
 private:
   static const http_parser_settings settings_;
@@ -58,6 +58,6 @@ private:
   http_parser_url url_parser_;
   HttpRequestBuilder request_builder_;
   ParseState state_;
-  std::string_view current_header_field;
+  std::string current_header_field;
 };
-} // namespace empty_d::http::protocol::parser
+} } } } // namespace empty_d::http::protocol::parser

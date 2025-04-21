@@ -11,7 +11,7 @@ class WebApplication {
 public:
   WebApplication() = delete;
   WebApplication(std::string address, std::string port, size_t max_clients_size,
-                 std::shared_ptr<UrlDispatcher> &url_dispatcher);
+                 std::shared_ptr<UrlDispatcher> url_dispatcher);
 
   void Run();
 

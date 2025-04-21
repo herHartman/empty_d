@@ -1,11 +1,12 @@
 #pragma once
 
-#include "definitions/boost_asio_types.h"
 #include "http/http_headers.h"
 #include "http/protocol/http_body_stream_reader.h"
 #include "http/protocol/http_methods.h"
-#include "io/serializable/json_serializable.h"
+#include <boost/asio/spawn.hpp>
 #include <boost/json.hpp>
+#include <boost/json/value_to.hpp>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -13,7 +14,9 @@
 
 using namespace boost;
 
-namespace empty_d::http::request {
+namespace empty_d {
+namespace http {
+namespace request {
 class HttpRequest {
 public:
   using QueryArgs = std::unordered_map<std::string, std::string>;
@@ -24,60 +27,64 @@ public:
                        std::string http_version,
                        std::shared_ptr<HttpBodyStreamReader> body,
                        std::string path, QueryArgs query_args,
-                       PathArgs path_args)
-      : content_length_(content_length), method_(method_),
-        headers_(std::move(headers)), host_(std::move(host)),
-        http_version_(std::move(http_version)), stream_reader_(std::move(body)),
-        path_(std::move(path)), query_args_(std::move(query_args)),
-        path_args_(std::move(path_args)), buffer_{} {}
+                       PathArgs path_args, boost::asio::yield_context yield)
+      : mcontentLength(content_length), mMethod(method_),
+        mHeaders(std::move(headers)), mHost(std::move(host)),
+        mHttpVersion(std::move(http_version)), mStreamReader(std::move(body)),
+        mPath(std::move(path)), mQueryArgs(std::move(query_args)),
+        mPathArgs(std::move(path_args)), mBuffer{}, mYield(std::move(yield)) {}
 
-  template <is_serializable T> awaitable<T> ReadBody() {
-    co_return typename T::serializer{}.deserialize(co_await ReadJson());
+  template <typename T> T ReadBody() {
+    return boost::json::value_to<T>(readJson());
   }
 
-  awaitable<json::value> ReadJson() {
-    const char *data = co_await Read();
-    boost::system::error_code ec;
-    json::value json_value = json::parse(data, ec);
-    co_return json_value;
-  }
-
-  awaitable<const char *> Read() {
-    if (buffer_.empty()) {
-      while (true) {
-        buffer_.reserve(GetContentLength());
-        std::string chunk = co_await stream_reader_->ReadAny();
-        if (chunk.empty())
-          break;
-        buffer_.assign(chunk.begin(), chunk.end());
-      }
+  json::value readJson() {
+    boost::json::stream_parser jsonParser;
+    while (!mStreamReader->isEof()) {
+      jsonParser.write(mStreamReader->readAny(mYield));
     }
-    co_return buffer_.data();
+    if (jsonParser.done()) {
+      return jsonParser.release();
+    } else {
+      throw std::runtime_error("error parse json");
+    }
   }
 
-  [[nodiscard]] std::size_t GetContentLength() const { return content_length_; }
+  std::string readAny() { return mStreamReader->readAny(mYield); }
 
-  [[nodiscard]] const std::string &GetPath() const { return path_; }
+  std::string readAll() {
+    std::string buffer;
+    while (!mStreamReader->isEof()) {
+      buffer.append(mStreamReader->readAny(mYield));
+    }
+    return buffer;
+  }
+  
+  [[nodiscard]] std::size_t GetContentLength() const { return mcontentLength; }
 
-  [[nodiscard]] http::HttpMethods GetMethod() const { return method_; }
+  [[nodiscard]] const std::string &GetPath() const { return mPath; }
+
+  [[nodiscard]] http::HttpMethods GetMethod() const { return mMethod; }
 
   [[nodiscard]] std::shared_ptr<HttpBodyStreamReader> GetStreamReader() const {
-    return stream_reader_;
+    return mStreamReader;
   }
 
-  const std::vector<std::string> &GetHeaders(std::string_view key);
+  const std::vector<std::string> &GetHeaders(const std::string &key);
 
 private:
-  std::size_t content_length_;
-
-  HttpMethods method_;
-  HttpHeaders headers_;
-  std::string host_;
-  std::string http_version_;
-  std::shared_ptr<HttpBodyStreamReader> stream_reader_;
-  std::vector<char> buffer_;
-  std::string path_;
-  std::unordered_map<std::string, std::string> query_args_;
-  std::unordered_map<std::string, std::string> path_args_;
+  std::size_t mcontentLength;
+  boost::asio::yield_context mYield;
+  HttpMethods mMethod;
+  HttpHeaders mHeaders;
+  std::string mHost;
+  std::string mHttpVersion;
+  std::shared_ptr<HttpBodyStreamReader> mStreamReader;
+  std::vector<char> mBuffer;
+  std::string mPath;
+  std::unordered_map<std::string, std::string> mQueryArgs;
+  std::unordered_map<std::string, std::string> mPathArgs;
 };
-} // namespace empty_d::http::request
+} // namespace request
+} // namespace http
+} // namespace empty_d

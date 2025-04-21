@@ -7,77 +7,66 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/spawn.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <memory>
-#include <unordered_map>
+#include <mutex>
+#include <unordered_set>
 #include <utility>
 
-using boost::asio::ip::tcp;
-namespace this_coro = boost::asio::this_coro;
 using boost::asio::detached;
-namespace uuids = boost::uuids;
+using boost::asio::ip::tcp;
 
-namespace empty_d::http {
+namespace empty_d {
+namespace http {
 
-using HttpConnections =
-    std::unordered_map<uuids::uuid, std::shared_ptr<HttpConnection>,
-                       boost::hash<boost::uuids::uuid>>;
+class ConnectionsManager {
+public:
+  explicit ConnectionsManager(boost::asio::io_context &ioContext);
+  void startHandleConnection(std::shared_ptr<HttpConnection> connection);
+  void stopHandleConnection(std::shared_ptr<HttpConnection> connection);
+  void stopAll();
+
+private:
+  std::unordered_set<std::shared_ptr<HttpConnection>> mActiveConnections;
+  boost::asio::io_context &mIOContext;
+  std::mutex mConnectionsMutex;
+};
 
 class HttpServer {
 public:
-  explicit HttpServer(boost::asio::io_context &io_context, std::string address,
+  explicit HttpServer(size_t threadPoolSize, std::string address,
                       std::string port,
-                      std::shared_ptr<UrlDispatcher> url_dispatcher,
-                      std::size_t max_requests = 1000)
-      : acceptor_(io_context), requests_count_(0), is_running_(false),
-        max_requests_(max_requests), port_(std::move(port)),
-        url_dispatcher_(std::move(url_dispatcher)),
-        address_(std::move(address)),
-        uuid_generator_(new uuids::random_generator()) {}
+                      std::shared_ptr<UrlDispatcher> urlDispatcher,
+                      std::size_t maxRequests = 1000)
+      : mPool(threadPoolSize),
+        mAcceptor(boost::asio::make_strand(mPool.get_executor())),
+        mRequestsCount(0), mIsRunning(false), mMaxRequests(maxRequests),
+        mPort(std::move(port)), mUrlDispatcher(std::move(urlDispatcher)),
+        mAddress(std::move(address)) {}
 
-  template <typename CompletionToken> auto Start(CompletionToken &&token) {
-    boost::asio::ip::tcp::resolver resolver(acceptor_.get_executor());
-    boost::asio::ip::tcp::endpoint endpoint =
-        *resolver.resolve(address_, port_).begin();
-    acceptor_.open(endpoint.protocol());
-    acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-    acceptor_.bind(endpoint);
-    acceptor_.listen();
-    is_running_ = true;
+  void start();
 
-    return boost::asio::async_compose<CompletionToken, void()>(
-        [&](auto &self) -> boost::asio::awaitable<void> {
-          for (;;) {
-            auto socket =
-                co_await acceptor_.async_accept(boost::asio::use_awaitable);
-            auto new_connection = std::make_shared<HttpConnection>(
-                protocol::parser::HttpRequestParser(url_dispatcher_), std::move(socket));
-            AddNewConnection(new_connection);
-            boost::asio::co_spawn(acceptor_.get_executor(),
-                                  new_connection->Handle(),
-                                  boost::asio::detached);
-          }
-          self.complete();
-        },
-        std::forward<CompletionToken>(token), acceptor_);
-  }
-  void ShutDown();
+  void shutDown();
 
 private:
-  tcp::acceptor acceptor_;
-  std::size_t requests_count_;
-  bool is_running_;
-  std::size_t max_requests_;
-  std::string address_;
-  std::string port_;
-  std::unique_ptr<uuids::random_generator> uuid_generator_;
-  HttpConnections http_connections_{};
-  std::shared_ptr<UrlDispatcher> url_dispatcher_;
+  void acceptLoop(boost::asio::yield_context yield);
 
-  void AddNewConnection(std::shared_ptr<HttpConnection> connection);
+  boost::asio::thread_pool mPool;
+  tcp::acceptor mAcceptor;
+  std::size_t mRequestsCount;
+  std::atomic<bool> mIsRunning{false};
+  std::size_t mMaxRequests;
+  std::string mAddress;
+  std::string mPort;
+  std::shared_ptr<UrlDispatcher> mUrlDispatcher;
+  ConnectionsManager mConnectionsManager;
 };
-} // namespace empty_d::http
+} // namespace http
+} // namespace empty_d

@@ -2,11 +2,10 @@
 #include "http/protocol/http_body_stream_reader.h"
 #include "http/url_dispatcher.hpp"
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 
-namespace empty_d::http::request {
+namespace empty_d { namespace http { namespace request {
 
 void HttpRequestBuilder::AppendHeaderField(const std::string &header_field) {
   current_header_field_ = header_field;
@@ -63,7 +62,7 @@ void HttpRequestBuilder::AppendBody(const std::string &body) {
   }
 }
 
-HttpRequest HttpRequestBuilder::BuildRequest() {
+std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
     handler = resource_->GetHandler(method_.value());
@@ -77,7 +76,7 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
 
   size_t content_length = headers_.GetContentLength();
   std::string &host = headers_.GetHost();
-  return HttpRequest{content_length,
+  return {HttpRequest{content_length,
                      method_.value(),
                      std::move(headers_),
                      host,
@@ -85,11 +84,11 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
                      std::shared_ptr<HttpBodyStreamReader>(nullptr),
                      std::move(path_.value()),
                      std::move(query_),
-                     std::move(path_args_)};
+                     std::move(path_args_)}, handler};
 }
 
-std::optional<Resource> HttpRequestBuilder::GetResource() const {
+boost::optional<Resource> HttpRequestBuilder::GetResource() const {
   return resource_;
 }
 
-} // namespace empty_d::http::request
+} } } // namespace empty_d::http::request

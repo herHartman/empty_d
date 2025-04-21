@@ -1,20 +1,22 @@
 #pragma once
 
+#include <boost/none.hpp>
+#include <boost/optional.hpp>
 #include <cstddef>
 #include <cstring>
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 
-namespace empty_d::radix_tree {
+namespace empty_d {
+namespace radix_tree {
 
 template <typename Key> struct prefix_comparator {
-  using key_iterator = Key::const_iterator;
+  using key_iterator = typename Key::const_iterator;
   using key_type = Key;
-  using size_type = key_type::size_type;
+  using size_type = typename key_type::size_type;
   using result_type = std::pair<size_type, size_type>;
 
   enum match_state {
@@ -77,18 +79,18 @@ template <typename Value, typename KCharT> struct rd_tree_node {
   base_ptr next = nullptr;
   base_ptr minor = nullptr;
   base_ptr parent = nullptr;
-  std::optional<value_type> value_field;
+  boost::optional<value_type> value_field;
   key_type key;
 
   rd_tree_node() = default;
   rd_tree_node(const rd_tree_node &) = default;
   rd_tree_node(rd_tree_node &&) = default;
 
-  rd_tree_node(key_type key, std::optional<value_type> value)
+  rd_tree_node(key_type key, boost::optional<value_type> value)
       : key(std::move(key)), value_field(std::move(value)), next(nullptr),
         minor(nullptr), parent(nullptr) {}
 
-  rd_tree_node(key_type key, std::optional<value_type> value, base_ptr minor,
+  rd_tree_node(key_type key, boost::optional<value_type> value, base_ptr minor,
                base_ptr parent, base_ptr next)
       : key(std::move(key)), value_field(std::move(value)), next(next),
         minor(minor), parent(parent) {}
@@ -134,8 +136,8 @@ public:
 
   class iterator {
   public:
-    typedef node_type::base_ptr base_ptr;
-    typedef node_type::key_type key_type;
+    typedef typename node_type::base_ptr base_ptr;
+    typedef typename node_type::key_type key_type;
     typedef Value mapped_type;
     typedef std::pair<const key_type, mapped_type> value_type;
     typedef Value &reference;
@@ -168,7 +170,7 @@ public:
     base_ptr node;
   };
 
-  typedef node_type::key_type key_type;
+  typedef typename node_type::key_type key_type;
   typedef Value mapped_type;
   typedef std::pair<const key_type, mapped_type> value_type;
   typedef value_type *pointer;
@@ -273,7 +275,7 @@ private:
           std::cout << "insert3" << key << std::endl;
           return {iterator(new_node), true};
         }
-        traverse_node->value_field = std::nullopt;
+        traverse_node->value_field = boost::none;
         key = key.substr(compare_prefix_result.second, key.size());
         traverse_node = new_node;
       } else if (compare_prefix_result.first == traverse_node->key.size()) {
@@ -293,7 +295,7 @@ private:
   }
 
 public:
-  std::optional<mapped_type> lookup(const key_type &key) const {
+  boost::optional<mapped_type> lookup(const key_type &key) const {
     node_type *traverse_node = root_.minor;
     std::size_t elements_found = 0;
     std::string key_view = key;
@@ -311,10 +313,11 @@ public:
       } else if (!compare_prefix_result.first) {
         traverse_node = traverse_node->next;
       } else {
-        return std::nullopt;
+        return boost::none;
       }
     }
-    return std::nullopt;
+    return boost::none;
   }
 };
-} // namespace empty_d::radix_tree
+} // namespace radix_tree
+} // namespace empty_d

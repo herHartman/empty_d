@@ -11,7 +11,7 @@ namespace empty_d::http {
 
 WebApplication::WebApplication(std::string address, std::string port,
                                size_t max_clients_size,
-                               std::shared_ptr<UrlDispatcher> &url_dispatcher)
+                               std::shared_ptr<UrlDispatcher> url_dispatcher)
     : url_dispatcher_(url_dispatcher),
       server_(new HttpServer(io_context_, std::move(address), std::move(port),
                              url_dispatcher, max_clients_size)) {}

@@ -8,7 +8,7 @@ namespace empty_d::http {
 
 void HttpHeaders::Set(const HeaderKey &key, HeaderValue value) {
   headers_.erase(key);
-  std::vector values{std::move(value)};
+  std::vector<HeaderValue> values{std::move(value)};
   values.reserve(1);
   headers_[key] = values;
 }

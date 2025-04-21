@@ -6,10 +6,9 @@
 #include "http/url_dispatcher.hpp"
 #include "http_request.h"
 #include <memory>
-#include <optional>
 #include <unordered_map>
 
-namespace empty_d::http::request {
+namespace empty_d { namespace http { namespace request {
 
 class HttpRequestBuilder {
 public:
@@ -25,22 +24,23 @@ public:
   void AppendQuery(const std::unordered_map<std::string, std::string> &query);
   void AppendHeader(const std::string &header_field,
                     const std::string &header_value);
-  void AppendBody(const std::string& body);
+  void AppendBody(const std::string &body);
 
-  HttpRequest BuildRequest();
+  std::pair<HttpRequest, HttpHandler> BuildRequest();
 
-  std::optional<Resource> GetResource() const;
+  boost::optional<Resource> GetResource() const;
+
 private:
-  std::optional<std::string> path_;
-  std::optional<std::string> http_version_;
-  std::optional<HttpMethods> method_;
+  boost::optional<std::string> path_;
+  boost::optional<std::string> http_version_;
+  boost::optional<HttpMethods> method_;
   std::unordered_map<std::string, std::string> query_;
   std::unordered_map<std::string, std::string> path_args_;
   HttpHeaders headers_;
   std::shared_ptr<UrlDispatcher> url_dispatcher_;
-  std::optional<Resource> resource_;
+  boost::optional<Resource> resource_;
   std::shared_ptr<request::HttpBodyStreamReader> body_reader_;
-  std::optional<std::string> current_header_field_;
+  boost::optional<std::string> current_header_field_;
 };
 
-}; // namespace empty_d::http::request
+} } }; // namespace empty_d::http::request

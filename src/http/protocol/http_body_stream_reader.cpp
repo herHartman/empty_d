@@ -1,28 +1,29 @@
 #include "http_body_stream_reader.h"
 
-namespace empty_d::http::request {
+namespace empty_d { namespace http { namespace request {
 
-awaitable<std::string> HttpBodyStreamReader::Text() { co_return std::string(); }
+std::string HttpBodyStreamReader::text() { return {}; }
 
-awaitable<void> HttpBodyStreamReader::Write(std::string data) {
-  if (buffer_.capacity() < (buffer_.size() + data.length())) {
-    buffer_.reserve(2 * buffer_.capacity());
+void HttpBodyStreamReader::write(const std::string& data, boost::asio::yield_context yield) {
+  if (mBuffer.capacity() < (mBuffer.size() + data.length())) {
+    mBuffer.reserve(2 * mBuffer.capacity());
   }
-  buffer_.append(data);
-  read_lock_->try_send(boost::system::error_code{}, 0);
-  co_return;
+  mBuffer.append(data);
+  mBodyReadLock->cancel_one();
 }
 
-void HttpBodyStreamReader::SetEof() {
-  eof_ = true;
-  read_lock_->try_send(boost::system::error_code{}, 0);
+void HttpBodyStreamReader::setEof() {
+  mEof = true;
+  mBodyReadLock->cancel_one();
 }
 
-awaitable<std::string> HttpBodyStreamReader::ReadAny() {
-  while (buffer_.empty() && !eof_) {
-    co_await read_lock_->async_receive(boost::asio::use_awaitable);
+std::string HttpBodyStreamReader::readAny(boost::asio::yield_context yield) {
+  while (mBuffer.empty() && !mEof) {
+    mBodyReadLock->async_wait(yield);
   }
-  std::string result = std::move(buffer_);
-  co_return std::move(result);
+  
+  std::string result = std::move(mBuffer);
+  mBuffer.clear();
+  return result;
 }
-} // namespace empty_d::http::request
+} } } // namespace empty_d::http::request
