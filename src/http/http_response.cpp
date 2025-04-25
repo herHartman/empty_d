@@ -20,7 +20,7 @@ namespace empty_d { namespace http {
     }
   }
   
-  std::string HttpResponse::serializeResponse() {
+  std::string HttpResponseBASE::serializeResponse() {
     
   }
 } }

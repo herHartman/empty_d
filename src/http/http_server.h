@@ -1,5 +1,6 @@
 #pragma once
 
+#include "http/http_response.hpp"
 #include "http/protocol/http_connection.h"
 #include "http/url_dispatcher.hpp"
 #include <boost/asio.hpp>
@@ -23,8 +24,7 @@
 using boost::asio::detached;
 using boost::asio::ip::tcp;
 
-namespace empty_d {
-namespace http {
+namespace empty_d::http {
 
 class ConnectionsManager {
 public:
@@ -39,7 +39,7 @@ private:
   std::mutex mConnectionsMutex;
 };
 
-class HttpServer {
+class HttpServer : std::enable_shared_from_this<HttpServer> {
 public:
   explicit HttpServer(size_t threadPoolSize, std::string address,
                       std::string port,
@@ -55,6 +55,32 @@ public:
 
   void shutDown();
 
+  template <typename Handler, typename... Args>
+  auto registerHandler(HttpMethods method, std::string path, Args &&...ctorArgs)
+      -> std::enable_if_t<std::is_base_of_v<BaseHttpRequestHandler, Handler>,
+                          void> {
+    auto handleRequest = [](HttpRequest &request,
+                            boost::asio::yield_context yield) mutable {
+      Handler handler(std::forward<Args>...);
+      return handler.handleRequest(request, yield);
+    };
+    mUrlDispatcher->addHandler(std::move(handleRequest), method,
+                               std::move(path));
+  }
+
+  template <typename Handler, typename... Args>
+  auto registerHandler(HttpMethods method, std::string path, Args &&...ctorArgs)
+      -> std::enable_if_t<
+          std::is_base_of_v<BaseHttpStreamRequestHandler, Handler>, void> {
+    auto handleRequest = [](HttpRequest &request, HttpStreamResponse &response,
+                            boost::asio::yield_context yield) {
+      Handler handler(std::forward<Args>...);
+      return handler.handleRequest(request, response, yield);
+    };
+    mUrlDispatcher->addHandler(std::move(handleRequest), method,
+                               std::move(path));
+  }
+
 private:
   void acceptLoop(boost::asio::yield_context yield);
 
@@ -68,5 +94,4 @@ private:
   std::shared_ptr<UrlDispatcher> mUrlDispatcher;
   ConnectionsManager mConnectionsManager;
 };
-} // namespace http
-} // namespace empty_d
+} // namespace empty_d::http

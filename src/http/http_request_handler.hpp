@@ -10,7 +10,7 @@ namespace empty_d::http {
 
 using boost::asio::awaitable;
 
-class HttpRequestHandler {
+class HttpRequestHandlerBase {
 public:
   awaitable<void> HandleRequest(request::HttpRequest &request);
 

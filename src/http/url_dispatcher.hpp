@@ -5,76 +5,74 @@
 #include "http/protocol/request/http_request.h"
 #include "radix_tree/radix_tree_map.hpp"
 #include <array>
+#include <boost/asio/spawn.hpp>
 #include <boost/function_types/detail/synthesize.hpp>
+#include <boost/optional.hpp>
+#include <boost/variant/variant.hpp>
 #include <functional>
 #include <vector>
-#include <boost/asio/spawn.hpp>
-#include <boost/optional.hpp>
 
-namespace empty_d { namespace http {
+namespace empty_d::http {
 
-using HttpHandler = std::function<HttpResponse(empty_d::http::request::HttpRequest&, boost::asio::yield_context yield)>;
+using StreamBodyHttpHandler =
+    std::function<void(empty_d::http::request::HttpRequest &,
+                       StreamHttpResponse &, boost::asio::yield_context yield)>;
+
+using FixedBodyHttpHandler = std::function<HttpResponse(
+    empty_d::http::request::HttpRequest &, boost::asio::yield_context yield)>;
+
+using HttpHandler = boost::variant<FixedBodyHttpHandler, StreamBodyHttpHandler>;
 
 struct PathArg {
   std::string arg_name;
   size_t segment_pos;
 };
 
-template <typename T> 
-struct type_from_member;
+template <typename T> struct type_from_member;
 
-template <typename M, typename T>
-struct type_from_member< M T::* > {
-    using type = T;
+template <typename M, typename T> struct type_from_member<M T::*> {
+  using type = T;
 };
-
-template<typename Method, typename... Args>
-auto make_handler(Method method, Args&&... ctor_args) {
-  using T = typename type_from_member<Method>::type;
-  return [method, ctor_args...](request::HttpRequest& request, boost::asio::yield_context yield) -> HttpResponse {
-    T controller(ctor_args...);
-    return (controller.*method)(request, yield);
-  };
-}
 
 class Resource {
 public:
-  explicit Resource(std::string path_, std::vector<PathArg> expected_args_)
-      : path_(std::move(path_)), expected_args_{std::move(expected_args_)} {}
+  explicit Resource(std::string path, std::vector<PathArg> expectedArgs)
+      : mPath(std::move(path)), mExpectedArgs{std::move(expectedArgs)} {}
 
-  void AddHandler(HttpHandler &handler, HttpMethods method);
-  HttpHandler GetHandler(HttpMethods method);
+  void addHandler(HttpHandler &handler, HttpMethods method);
+  HttpHandler getHandler(HttpMethods method);
 
-  [[nodiscard]] const std::vector<PathArg> &GetPathArgs() const {
-    return expected_args_;
+  [[nodiscard]] const std::vector<PathArg> &getPathArgs() const {
+    return mExpectedArgs;
   }
 
 private:
-  std::string path_;
-  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> handlers_{
+  std::string mPath;
+  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> mHandlers{
       nullptr};
-  std::vector<PathArg> expected_args_;
+  std::vector<PathArg> mExpectedArgs;
 };
 
 class UrlDispatcher {
 public:
   struct MatchInfo {
     HttpHandler handler;
-    std::string route_;
+    std::string route;
   };
 
   using Routes = radix_tree::radix_tree_map<Resource, char>;
 
-  void AddHandler(const HttpHandler &handler, HttpMethods method,
-                  const std::string &path);
-  HttpHandler GetHandler(const std::string &path, HttpMethods method);
+  void addHandler(HttpHandler handler, HttpMethods method, std::string path);
 
-  boost::optional<Resource> GetResource(const std::string &path) const;
-  
+  HttpHandler getHandler(const std::string &path, HttpMethods method);
+
+  [[nodiscard]] boost::optional<Resource>
+  getResource(const std::string &path) const;
+
 private:
   radix_tree::radix_tree_map<Resource, char> routes_{};
 
-  static std::vector<std::string> SplitBySlash(const std::string &path);
-  static bool IsDynamicPathPart(const std::string &path_part);
+  static std::vector<std::string> splitBySlash(const std::string &path);
+  static bool isDynamicPathPart(const std::string &path_part);
 };
-} } // namespace empty_d::http
+} // namespace empty_d::http

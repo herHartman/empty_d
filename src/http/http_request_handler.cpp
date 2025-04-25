@@ -2,5 +2,5 @@
 
 namespace empty_d::http {
 awaitable<void>
-HttpRequestHandler::HandleRequest(request::HttpRequest &request) {}
+HttpRequestHandlerBase::HandleRequest(request::HttpRequest &request) {}
 } // namespace empty_d::http

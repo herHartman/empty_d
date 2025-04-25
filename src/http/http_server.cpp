@@ -8,8 +8,8 @@
 #include <exception>
 #include <mutex>
 
-namespace empty_d {
-namespace http {
+
+namespace empty_d::http {
 
 ConnectionsManager::ConnectionsManager(boost::asio::io_context &ioContext)
     : mIOContext(ioContext), mActiveConnections{} {}
@@ -37,8 +37,7 @@ void ConnectionsManager::startHandleConnection(
 }
 
 void ConnectionsManager::stopHandleConnection(
-    std::shared_ptr<HttpConnection> connection) 
-    {}
+    std::shared_ptr<HttpConnection> connection) {}
 
 void ConnectionsManager::stopAll() {}
 
@@ -75,5 +74,5 @@ void HttpServer::shutDown() {
   mPool.join();
 }
 
-} // namespace http
-} // namespace empty_d
+} // namespace empty_d::http
+

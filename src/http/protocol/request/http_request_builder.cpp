@@ -29,9 +29,9 @@ void HttpRequestBuilder::AppendMethod(http::HttpMethods method) {
 
 void HttpRequestBuilder::AppendPath(const std::string &path) {
   path_ = path;
-  resource_ = url_dispatcher_->GetResource(path);
+  resource_ = url_dispatcher_->getResource(path);
   if (resource_) {
-    const auto &path_args = resource_->GetPathArgs();
+    const auto &path_args = resource_->getPathArgs();
     for (auto &path_arg : path_args) {
       std::string::size_type arg_last_pos =
           path.find('/', path_arg.segment_pos);
@@ -65,7 +65,7 @@ void HttpRequestBuilder::AppendBody(const std::string &body) {
 std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
-    handler = resource_->GetHandler(method_.value());
+    handler = resource_->getHandler(method_.value());
   } else {
     throw std::runtime_error("need resource or method");
   }

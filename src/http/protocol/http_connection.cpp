@@ -7,11 +7,18 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/impl/spawn.hpp>
+#include <boost/asio/spawn.hpp>
 #include <boost/asio/use_awaitable.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/functional/overloaded_function.hpp>
 #include <boost/system/detail/error_code.hpp>
+#include <boost/variant.hpp>
 #include <stdexcept>
 
 namespace empty_d::http {
+
+using FixedBodyHttpHandler = std::function<HttpResponse(
+    empty_d::http::request::HttpRequest &, boost::asio::yield_context yield)>;
 
 void HttpConnection::HandleRequest(HttpRequest &request) {
   // std::optional<Resource> resource = request_parser_.GetResource();
@@ -72,24 +79,52 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
   std::shared_ptr<request::HttpBodyStreamReader> body_reader =
       buidRequestResult.first.GetStreamReader();
 
-  boost::asio::spawn(socket_.get_executor(),
-                     [&buidRequestResult](boost::asio::yield_context yield) {
-                       buidRequestResult.second(buidRequestResult.first, yield);
-                     });
-
   boost::asio::spawn(
       socket_.get_executor(),
       [this, body_reader](boost::asio::yield_context yield) mutable {
         readRequestBody(yield, body_reader);
       });
-  
-  // co_await response_awaiter_.async_receive(boost::asio::use_awaitable);
 
-  // co_await socket_.async_send(boost::asio::dynamic_buffer(write_buffer_),
-  //                             use_awaitable);
+  auto visitor = boost::make_overloaded_function(
+      [this, &buidRequestResult,
+       yield](FixedBodyHttpHandler requestHandler) mutable {
+        processRequest(requestHandler, buidRequestResult.first, yield);
+      },
+      [this, &buidRequestResult, yield](StreamBodyHttpHandler requestHandler) {
+        processRequest(requestHandler, buidRequestResult.first, yield);
+      });
 
+  boost::apply_visitor(visitor, buidRequestResult.second);
   socket_.close();
-  // тут дожидаемся ответа
+}
+
+void HttpConnection::processRequest(FixedBodyHttpHandler handler,
+                                    HttpRequest &request,
+                                    boost::asio::yield_context yield) {
+  HttpResponse response = handler(request, yield);
+  boost::asio::async_write(
+      socket_, boost::asio::buffer(response.serializeHeaders()), yield);
+  boost::asio::async_write(
+      socket_, boost::asio::buffer(response.serializeResponse()), yield);
+}
+
+void HttpConnection::processRequest(StreamBodyHttpHandler handler,
+                                    HttpRequest &request,
+                                    boost::asio::yield_context yield) {
+  StreamHttpResponse response;
+  boost::asio::spawn(
+      socket_.get_executor(),
+      [this, handler, &request, &response](boost::asio::yield_context yield) mutable {
+        handler(request, response, yield);
+      });
+
+  response.awaitEndOfHeaders(yield);
+  boost::asio::async_write(socket_, boost::asio::buffer(response.serializeHeaders()), yield);
+  
+  while (not response.isEndOfStream(yield)) {
+    std::string nextChunk = response.readChunk(yield);
+    boost::asio::async_write(socket_, boost::asio::buffer(nextChunk), yield);
+  }
 }
 
 } // namespace empty_d::http
