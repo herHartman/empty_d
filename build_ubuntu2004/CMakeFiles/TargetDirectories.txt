@@ -1,3 +1,0 @@
-/home/chopk/empty_d_2/empty_d/build_ubuntu2004/CMakeFiles/empty_d.dir
-/home/chopk/empty_d_2/empty_d/build_ubuntu2004/CMakeFiles/edit_cache.dir
-/home/chopk/empty_d_2/empty_d/build_ubuntu2004/CMakeFiles/rebuild_cache.dir
