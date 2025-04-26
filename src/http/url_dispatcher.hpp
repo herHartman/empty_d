@@ -14,14 +14,8 @@
 
 namespace empty_d::http {
 
-using StreamBodyHttpHandler =
-    std::function<void(empty_d::http::request::HttpRequest &,
-                       StreamHttpResponse &, boost::asio::yield_context yield)>;
-
-using FixedBodyHttpHandler = std::function<HttpResponse(
-    empty_d::http::request::HttpRequest &, boost::asio::yield_context yield)>;
-
-using HttpHandler = boost::variant<FixedBodyHttpHandler, StreamBodyHttpHandler>;
+class HttpConnection;
+using HttpHandler = std::function<void(std::shared_ptr<HttpConnection>, request::HttpRequest&, boost::asio::yield_context yield)>;
 
 struct PathArg {
   std::string arg_name;
@@ -48,8 +42,7 @@ public:
 
 private:
   std::string mPath;
-  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> mHandlers{
-      nullptr};
+  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> mHandlers{};
   std::vector<PathArg> mExpectedArgs;
 };
 

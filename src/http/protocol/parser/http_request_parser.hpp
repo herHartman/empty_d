@@ -8,7 +8,7 @@
 using empty_d::http::request::HttpRequest;
 using empty_d::http::request::HttpRequestBuilder;
 
-namespace empty_d { namespace http { namespace protocol { namespace parser {
+namespace empty_d::http::protocol::parser {
 class HttpRequestParser {
 public:
   explicit HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher);
@@ -60,4 +60,4 @@ private:
   ParseState state_;
   std::string current_header_field;
 };
-} } } } // namespace empty_d::http::protocol::parser
+}    // namespace empty_d::http::protocol::parser

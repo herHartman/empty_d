@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace empty_d { namespace http { namespace protocol { namespace parser {
+namespace empty_d::http::protocol::parser {
 
 const http_parser_settings HttpRequestParser::settings_ = []() {
   http_parser_settings settings{};
@@ -196,4 +196,4 @@ boost::optional<Resource> HttpRequestParser::GetResource() const {
   return request_builder_.GetResource();
 }
 
-} } } } // namespace empty_d::http::protocol::parser
+}    // namespace empty_d::http::protocol::parser

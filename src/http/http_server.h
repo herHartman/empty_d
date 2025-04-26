@@ -18,6 +18,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <memory>
 #include <mutex>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 
@@ -44,41 +45,29 @@ public:
   explicit HttpServer(size_t threadPoolSize, std::string address,
                       std::string port,
                       std::shared_ptr<UrlDispatcher> urlDispatcher,
-                      std::size_t maxRequests = 1000)
+                      boost::asio::io_context &ioContext,
+                      size_t maxRequests = 1000)
       : mPool(threadPoolSize),
         mAcceptor(boost::asio::make_strand(mPool.get_executor())),
         mRequestsCount(0), mIsRunning(false), mMaxRequests(maxRequests),
         mPort(std::move(port)), mUrlDispatcher(std::move(urlDispatcher)),
-        mAddress(std::move(address)) {}
+        mAddress(std::move(address)), mConnectionsManager(ioContext) {}
 
   void start();
 
   void shutDown();
 
   template <typename Handler, typename... Args>
-  auto registerHandler(HttpMethods method, std::string path, Args &&...ctorArgs)
-      -> std::enable_if_t<std::is_base_of_v<BaseHttpRequestHandler, Handler>,
-                          void> {
-    auto handleRequest = [](HttpRequest &request,
-                            boost::asio::yield_context yield) mutable {
-      Handler handler(std::forward<Args>...);
-      return handler.handleRequest(request, yield);
+  auto registerHandler(HttpMethods method, std::string path, Args &&...args) {
+    auto handleRequest =
+        [&args...](std::shared_ptr<HttpConnection> connection,
+                   HttpRequest &request,
+                   boost::asio::yield_context yield) mutable -> HttpResponse {
+      std::unique_ptr<Handler> handler =
+          std::make_unique<Handler>(std::forward<Args>(args)...);
+      connection->processRequest(handler, request, yield);
     };
-    mUrlDispatcher->addHandler(std::move(handleRequest), method,
-                               std::move(path));
-  }
-
-  template <typename Handler, typename... Args>
-  auto registerHandler(HttpMethods method, std::string path, Args &&...ctorArgs)
-      -> std::enable_if_t<
-          std::is_base_of_v<BaseHttpStreamRequestHandler, Handler>, void> {
-    auto handleRequest = [](HttpRequest &request, HttpStreamResponse &response,
-                            boost::asio::yield_context yield) {
-      Handler handler(std::forward<Args>...);
-      return handler.handleRequest(request, response, yield);
-    };
-    mUrlDispatcher->addHandler(std::move(handleRequest), method,
-                               std::move(path));
+    mUrlDispatcher->addHandler(handleRequest, method, path);
   }
 
 private:

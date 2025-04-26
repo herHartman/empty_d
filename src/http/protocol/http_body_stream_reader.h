@@ -11,7 +11,7 @@
 
 using boost::asio::ip::tcp;
 
-namespace empty_d { namespace http { namespace request {
+  namespace empty_d::http::request {
 class HttpBodyStreamReader {
 public:
 
@@ -36,4 +36,4 @@ private:
   bool mEof = false;
   std::string mBuffer{};
 };
-} } } // namespace empty_d::http::request
+}   // namespace empty_d::http::request

@@ -12,11 +12,11 @@
 #include <utility>
 #include <vector>
 
+
+namespace empty_d::http::request {
+
 using namespace boost;
 
-namespace empty_d {
-namespace http {
-namespace request {
 class HttpRequest {
 public:
   using QueryArgs = std::unordered_map<std::string, std::string>;
@@ -27,21 +27,21 @@ public:
                        std::string http_version,
                        std::shared_ptr<HttpBodyStreamReader> body,
                        std::string path, QueryArgs query_args,
-                       PathArgs path_args, boost::asio::yield_context yield)
+                       PathArgs path_args)
       : mcontentLength(content_length), mMethod(method_),
         mHeaders(std::move(headers)), mHost(std::move(host)),
         mHttpVersion(std::move(http_version)), mStreamReader(std::move(body)),
         mPath(std::move(path)), mQueryArgs(std::move(query_args)),
-        mPathArgs(std::move(path_args)), mBuffer{}, mYield(std::move(yield)) {}
+        mPathArgs(std::move(path_args)), mBuffer{} {}
 
-  template <typename T> T ReadBody() {
-    return boost::json::value_to<T>(readJson());
+  template <typename T> T ReadBody(boost::asio::yield_context yield) {
+    return boost::json::value_to<T>(readJson(yield));
   }
 
-  json::value readJson() {
+  json::value readJson(boost::asio::yield_context yield) {
     boost::json::stream_parser jsonParser;
     while (!mStreamReader->isEof()) {
-      jsonParser.write(mStreamReader->readAny(mYield));
+      jsonParser.write(mStreamReader->readAny(yield));
     }
     if (jsonParser.done()) {
       return jsonParser.release();
@@ -50,12 +50,12 @@ public:
     }
   }
 
-  std::string readAny() { return mStreamReader->readAny(mYield); }
+  std::string readAny(boost::asio::yield_context yield) { return mStreamReader->readAny(yield); }
 
-  std::string readAll() {
+  std::string readAll(boost::asio::yield_context yield) {
     std::string buffer;
     while (!mStreamReader->isEof()) {
-      buffer.append(mStreamReader->readAny(mYield));
+      buffer.append(mStreamReader->readAny(yield));
     }
     return buffer;
   }
@@ -74,7 +74,6 @@ public:
 
 private:
   std::size_t mcontentLength;
-  boost::asio::yield_context mYield;
   HttpMethods mMethod;
   HttpHeaders mHeaders;
   std::string mHost;
@@ -85,6 +84,4 @@ private:
   std::unordered_map<std::string, std::string> mQueryArgs;
   std::unordered_map<std::string, std::string> mPathArgs;
 };
-} // namespace request
-} // namespace http
-} // namespace empty_d
+} // namespace empty_d::http::request

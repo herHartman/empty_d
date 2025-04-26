@@ -1,7 +1,7 @@
 #pragma once
 
 #include "http/http_headers.h"
-#include "http/protocol/parser/http_request_parser.hpp"
+#include "http/protocol/request/http_request.h"
 #include "http_status.h"
 #include <boost/asio/spawn.hpp>
 #include <boost/json.hpp>
@@ -9,6 +9,7 @@
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
+#include <boost/asio.hpp>
 
 namespace empty_d::http {
 
@@ -29,7 +30,7 @@ public:
   bool setHeader(std::string name, std::vector<std::string> values);
   bool addHeader(std::string name, std::vector<std::string> values);
 
-  void prepare(std::shared_ptr<HttpRequest> request);
+  void prepare(std::shared_ptr<empty_d::http::request::HttpRequest> request);
 
   template <typename T> T getQueryParam() const;
 
@@ -116,7 +117,7 @@ private:
 
 class HttpHandlerBase {
 public:
-  virtual HttpResponse handleRequest(HttpResponse &response,
+  virtual HttpResponse handleRequest(empty_d::http::request::HttpRequest &request,
                                      boost::asio::yield_context yield);
 
 private:
@@ -124,7 +125,8 @@ private:
 
 class StreamResponseHttpHandlerBase {
 public:
-  virtual void handleRequest(HttpRequest &request, StreamHttpResponse &response,
+  virtual void handleRequest(empty_d::http::request::HttpRequest &request,
+                             StreamHttpResponse &response,
                              boost::asio::yield_context yield) = 0;
 
 private:

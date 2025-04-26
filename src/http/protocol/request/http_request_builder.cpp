@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace empty_d { namespace http { namespace request {
+namespace empty_d::http::request {
 
 void HttpRequestBuilder::AppendHeaderField(const std::string &header_field) {
   current_header_field_ = header_field;
@@ -58,7 +58,7 @@ void HttpRequestBuilder::AppendHeader(const std::string &header_field,
 
 void HttpRequestBuilder::AppendBody(const std::string &body) {
   if (!body_reader_) {
-    body_reader_ = std::make_shared<request::HttpBodyStreamReader>();
+    body_reader_ = std::make_shared<request::HttpBodyStreamReader>(nullptr, 0);
   }
 }
 
@@ -91,4 +91,4 @@ boost::optional<Resource> HttpRequestBuilder::GetResource() const {
   return resource_;
 }
 
-} } } // namespace empty_d::http::request
+}   // namespace empty_d::http::request

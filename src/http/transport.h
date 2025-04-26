@@ -8,8 +8,7 @@
 
 using boost::asio::ip::tcp;
 
-namespace empty_d {
-namespace network {
+namespace empty_d::network {
 class Transport {
 public:
   explicit Transport(tcp::socket socket)
@@ -29,7 +28,7 @@ public:
 
   executor_type getExecutor() { return mSocket.get_executor(); }
 
-  bool isOpen() const { return mSocket.is_open(); }
+  [[nodiscard]] bool isOpen() const { return mSocket.is_open(); }
 
   void Close() {
     mSocket.shutdown(tcp::socket::shutdown_send);
@@ -45,5 +44,5 @@ private:
       mReadBuffer{mBucket};
 };
 
-} // namespace network
-} // namespace empty_d
+} // namespace empty_d::network
+

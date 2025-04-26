@@ -1,6 +1,6 @@
 #include "http_body_stream_reader.h"
 
-namespace empty_d { namespace http { namespace request {
+namespace empty_d::http::request {
 
 std::string HttpBodyStreamReader::text() { return {}; }
 
@@ -26,4 +26,4 @@ std::string HttpBodyStreamReader::readAny(boost::asio::yield_context yield) {
   mBuffer.clear();
   return result;
 }
-} } } // namespace empty_d::http::request
+}   // namespace empty_d::http::request

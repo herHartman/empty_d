@@ -4,11 +4,12 @@
 #include "http/protocol/http_body_stream_reader.h"
 #include "http/protocol/http_methods.h"
 #include "http/url_dispatcher.hpp"
+#include <boost/optional.hpp>
 #include "http_request.h"
 #include <memory>
 #include <unordered_map>
 
-namespace empty_d { namespace http { namespace request {
+namespace empty_d::http::request {
 
 class HttpRequestBuilder {
 public:
@@ -43,4 +44,4 @@ private:
   boost::optional<std::string> current_header_field_;
 };
 
-} } }; // namespace empty_d::http::request
+}  ; // namespace empty_d::http::request

@@ -13,7 +13,7 @@
 #include <boost/functional/overloaded_function.hpp>
 #include <boost/system/detail/error_code.hpp>
 #include <boost/variant.hpp>
-#include <stdexcept>
+#include <memory>
 
 namespace empty_d::http {
 
@@ -84,38 +84,26 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
       [this, body_reader](boost::asio::yield_context yield) mutable {
         readRequestBody(yield, body_reader);
       });
-
-  auto visitor = boost::make_overloaded_function(
-      [this, &buidRequestResult,
-       yield](FixedBodyHttpHandler requestHandler) mutable {
-        processRequest(requestHandler, buidRequestResult.first, yield);
-      },
-      [this, &buidRequestResult, yield](StreamBodyHttpHandler requestHandler) {
-        processRequest(requestHandler, buidRequestResult.first, yield);
-      });
-
-  boost::apply_visitor(visitor, buidRequestResult.second);
+      
   socket_.close();
 }
 
-void HttpConnection::processRequest(FixedBodyHttpHandler handler,
-                                    HttpRequest &request,
-                                    boost::asio::yield_context yield) {
-  HttpResponse response = handler(request, yield);
+void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler, HttpRequest& request, boost::asio::yield_context yield)
+{
+  HttpResponse response = handler->handleRequest(request, yield);
   boost::asio::async_write(
       socket_, boost::asio::buffer(response.serializeHeaders()), yield);
   boost::asio::async_write(
       socket_, boost::asio::buffer(response.serializeResponse()), yield);
 }
 
-void HttpConnection::processRequest(StreamBodyHttpHandler handler,
-                                    HttpRequest &request,
-                                    boost::asio::yield_context yield) {
+void HttpConnection::processRequest(std::unique_ptr<StreamResponseHttpHandlerBase> handler, HttpRequest& request, boost::asio::yield_context yield)
+{
   StreamHttpResponse response;
   boost::asio::spawn(
       socket_.get_executor(),
-      [this, handler, &request, &response](boost::asio::yield_context yield) mutable {
-        handler(request, response, yield);
+      [this, handler = std::move(handler), &request, &response](boost::asio::yield_context yield) mutable {
+        handler->handleRequest(request, response, yield);
       });
 
   response.awaitEndOfHeaders(yield);
