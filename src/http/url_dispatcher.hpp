@@ -5,13 +5,17 @@
 #include "http/protocol/request/http_request.h"
 #include "radix_tree/radix_tree_map.hpp"
 #include <array>
+#include <boost/asio/spawn.hpp>
+#include <boost/function_types/detail/synthesize.hpp>
+#include <boost/optional.hpp>
+#include <boost/variant/variant.hpp>
 #include <functional>
 #include <vector>
 
 namespace empty_d::http {
 
-using HttpHandler =
-    std::function<awaitable<HttpResponse>(request::HttpRequest)>;
+class HttpConnection;
+using HttpHandler = std::function<void(std::shared_ptr<HttpConnection>, request::HttpRequest&, boost::asio::yield_context yield)>;
 
 struct PathArg {
   std::string arg_name;
@@ -20,43 +24,42 @@ struct PathArg {
 
 class Resource {
 public:
-  explicit Resource(std::string path_, std::vector<PathArg> expected_args_)
-      : path_(std::move(path_)), expected_args_{std::move(expected_args_)} {}
+  explicit Resource(std::string path, std::vector<PathArg> expectedArgs)
+      : mPath(std::move(path)), mExpectedArgs{std::move(expectedArgs)} {}
 
-  void AddHandler(const HttpHandler &handler, HttpMethods method);
-  HttpHandler GetHandler(HttpMethods method);
+  void addHandler(HttpHandler &handler, HttpMethods method);
+  HttpHandler getHandler(HttpMethods method);
 
-  [[nodiscard]] const std::vector<PathArg> &GetPathArgs() const {
-    return expected_args_;
+  [[nodiscard]] const std::vector<PathArg> &getPathArgs() const {
+    return mExpectedArgs;
   }
 
 private:
-  std::string path_;
-  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> handlers_{
-      nullptr};
-  std::vector<PathArg> expected_args_;
+  std::string mPath;
+  std::array<HttpHandler, static_cast<size_t>(HttpMethods::COUNT)> mHandlers{};
+  std::vector<PathArg> mExpectedArgs;
 };
 
 class UrlDispatcher {
 public:
   struct MatchInfo {
     HttpHandler handler;
-    std::string route_;
+    std::string route;
   };
 
   using Routes = radix_tree::radix_tree_map<Resource, char>;
 
-  void AddHandler(const HttpHandler &handler, HttpMethods method,
-                  const std::string &path);
-  HttpHandler GetHandler(const std::string &path, HttpMethods method);
+  void addHandler(HttpHandler handler, HttpMethods method, std::string path);
 
-  [[nodiscard]] std::optional<Resource>
-  GetResource(const std::string &path) const;
+  HttpHandler getHandler(const std::string &path, HttpMethods method);
+
+  [[nodiscard]] boost::optional<Resource>
+  getResource(const std::string &path) const;
 
 private:
-  Routes routes_{};
+  radix_tree::radix_tree_map<Resource, char> routes_{};
 
-  static std::vector<std::string> SplitBySlash(const std::string &path);
-  static bool IsDynamicPathPart(const std::string &path_part);
+  static std::vector<std::string> splitBySlash(const std::string &path);
+  static bool isDynamicPathPart(const std::string &path_part);
 };
 } // namespace empty_d::http

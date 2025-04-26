@@ -3,44 +3,37 @@
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/experimental/channel.hpp>
+#include <boost/asio/spawn.hpp>
 #include <memory>
 #include <string>
 #include <utility>
 
-using boost::asio::awaitable;
-using boost::asio::deferred;
-using boost::asio::experimental::channel;
+
 using boost::asio::ip::tcp;
 
-namespace empty_d::http::request {
+  namespace empty_d::http::request {
 class HttpBodyStreamReader {
 public:
-  template <typename AsyncReadStream, typename DynamicBuffer> class ReadAnyOp;
 
-  typedef channel<void(boost::system::error_code, std::size_t)> ReadLockChannel;
-
-  typedef std::shared_ptr<ReadLockChannel> ReadLockChannel_P;
-
-  explicit HttpBodyStreamReader(ReadLockChannel_P channel,
+  explicit HttpBodyStreamReader(std::shared_ptr<boost::asio::steady_timer> bodyReadLock,
                                 size_t body_content_legnt)
-      : read_lock_(std::move(channel)),
-        body_content_length(body_content_legnt) {
-    buffer_.reserve(8096);
+      : mBodyReadLock(std::move(bodyReadLock)),
+        mBodyContentLength(body_content_legnt) {
+    mBuffer.reserve(8096);
   }
 
-  awaitable<std::string> Text();
-  awaitable<void> Write(std::string data);
-  awaitable<std::string> ReadAny();
+  std::string text();
+  void write(const std::string& data, boost::asio::yield_context yield);
+  std::string readAny(boost::asio::yield_context yield);
 
-  void SetEof();
+  void setEof();
 
-  [[nodiscard]] bool IsEof() const { return eof_; }
+  [[nodiscard]] bool isEof() const { return mEof; }
 
 private:
-  size_t body_content_length;
-  ReadLockChannel_P read_lock_;
-  bool eof_ = false;
-  std::string buffer_{};
+  size_t mBodyContentLength;
+  std::shared_ptr<boost::asio::steady_timer> mBodyReadLock;
+  bool mEof = false;
+  std::string mBuffer{};
 };
-} // namespace empty_d::http::request
+}   // namespace empty_d::http::request

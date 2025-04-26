@@ -4,9 +4,7 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 
 namespace empty_d::http::protocol::parser {
@@ -26,9 +24,9 @@ const http_parser_settings HttpRequestParser::settings_ = []() {
   return settings;
 }();
 
-HttpRequestParser::HttpRequestParser()
-    : parser_{}, url_parser_{},
-      request_builder_{std::make_shared<UrlDispatcher>()},
+HttpRequestParser::HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher)
+    : parser_{},  url_parser_{},
+      request_builder_{std::move(url_dispatcher)},
       current_header_field{}, state_{ParseState::INITED} {
   http_parser_init(&parser_, HTTP_REQUEST);
   http_parser_url_init(&url_parser_);
@@ -97,7 +95,7 @@ int HttpRequestParser::OnMessageCompleteImpl(http_parser *parser) {
 
 int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
                                  size_t len) {
-  std::cout << std::string_view(data, data + len) << std::endl;
+  std::cout << std::string(data, data + len) << std::endl;
   if (int res = http_parser_parse_url(data, len, 0, &url_parser_)) {
     return res;
   }
@@ -148,7 +146,7 @@ int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
 
 int HttpRequestParser::OnHeaderFieldImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  current_header_field = std::string_view(data, data[len]);
+  current_header_field = std::string(data, data[len]);
   return 0;
 }
 
@@ -190,12 +188,12 @@ bool HttpRequestParser::ParseComplete() const {
   return state_ == ParseState::COMPLETE;
 }
 
-HttpRequest HttpRequestParser::BuildRequest() {
+std::pair<HttpRequest, HttpHandler> HttpRequestParser::BuildRequest() {
   return request_builder_.BuildRequest();
 }
 
-std::optional<Resource> HttpRequestParser::GetResource() const {
+boost::optional<Resource> HttpRequestParser::GetResource() const {
   return request_builder_.GetResource();
 }
 
-} // namespace empty_d::http::protocol::parser
+}    // namespace empty_d::http::protocol::parser

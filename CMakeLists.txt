@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.16)
 
 project(empty_d)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -34,7 +34,7 @@ add_executable(
 
 find_package(Boost REQUIRED)
 find_package(Boost REQUIRED COMPONENTS json)
-
+find_package(Boost REQUIRED COMPONENTS system coroutine)
 
 set(CORE_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 
@@ -45,4 +45,6 @@ target_include_directories(empty_d PUBLIC
 target_link_libraries(
     empty_d
     PRIVATE Boost::boost Boost::json
+    Boost::system
+    Boost::coroutine
 )

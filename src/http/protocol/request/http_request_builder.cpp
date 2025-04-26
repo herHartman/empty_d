@@ -2,7 +2,6 @@
 #include "http/protocol/http_body_stream_reader.h"
 #include "http/url_dispatcher.hpp"
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -30,9 +29,9 @@ void HttpRequestBuilder::AppendMethod(http::HttpMethods method) {
 
 void HttpRequestBuilder::AppendPath(const std::string &path) {
   path_ = path;
-  resource_ = url_dispatcher_->GetResource(path);
+  resource_ = url_dispatcher_->getResource(path);
   if (resource_) {
-    const auto &path_args = resource_->GetPathArgs();
+    const auto &path_args = resource_->getPathArgs();
     for (auto &path_arg : path_args) {
       std::string::size_type arg_last_pos =
           path.find('/', path_arg.segment_pos);
@@ -59,14 +58,14 @@ void HttpRequestBuilder::AppendHeader(const std::string &header_field,
 
 void HttpRequestBuilder::AppendBody(const std::string &body) {
   if (!body_reader_) {
-    body_reader_ = std::make_shared<request::HttpBodyStreamReader>();
+    body_reader_ = std::make_shared<request::HttpBodyStreamReader>(nullptr, 0);
   }
 }
 
-HttpRequest HttpRequestBuilder::BuildRequest() {
+std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
-    handler = resource_->GetHandler(method_.value());
+    handler = resource_->getHandler(method_.value());
   } else {
     throw std::runtime_error("need resource or method");
   }
@@ -77,7 +76,7 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
 
   size_t content_length = headers_.GetContentLength();
   std::string &host = headers_.GetHost();
-  return HttpRequest{content_length,
+  return {HttpRequest{content_length,
                      method_.value(),
                      std::move(headers_),
                      host,
@@ -85,11 +84,11 @@ HttpRequest HttpRequestBuilder::BuildRequest() {
                      std::shared_ptr<HttpBodyStreamReader>(nullptr),
                      std::move(path_.value()),
                      std::move(query_),
-                     std::move(path_args_)};
+                     std::move(path_args_)}, handler};
 }
 
-std::optional<Resource> HttpRequestBuilder::GetResource() const {
+boost::optional<Resource> HttpRequestBuilder::GetResource() const {
   return resource_;
 }
 
-} // namespace empty_d::http::request
+}   // namespace empty_d::http::request

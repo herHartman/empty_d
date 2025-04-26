@@ -1,55 +1,48 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/experimental/awaitable_operators.hpp>
-#include <boost/asio/experimental/channel.hpp>
-
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/spawn.hpp>
 #include <memory>
 #include <utility>
 
-using boost::asio::awaitable;
-using boost::asio::deferred;
-using boost::asio::experimental::channel;
 using boost::asio::ip::tcp;
-using namespace boost::asio::experimental::awaitable_operators;
 
 namespace empty_d::network {
 class Transport {
 public:
-  typedef std::shared_ptr<Transport> Transport_P;
+  explicit Transport(tcp::socket socket)
+      : mSocket(std::move(socket)) {}
 
-  explicit Transport(tcp::socket socket) : socket_(std::move(socket)) {}
-
+  using executor_type = tcp::socket::executor_type;
+  
   template <typename MutableBufferSequence>
-  awaitable<std::size_t> Read(const MutableBufferSequence &buffers) {
-    std::size_t len =
-        co_await socket_.async_read_some(buffers, boost::asio::use_awaitable);
-    co_return len;
+  size_t asyncRead(const MutableBufferSequence &buffers, boost::asio::yield_context yield) {
+    return mSocket.async_read_some(buffers, yield);
   }
 
   template <typename ConstBufferSequence>
-  awaitable<void> Write(const ConstBufferSequence &buffers) {
-    co_await socket_.async_write_some(buffers,
-                                      as_tuple(boost::asio::use_awaitable));
+  void asyncWrite(const ConstBufferSequence &buffers, boost::asio::yield_context yield) {
+    mSocket.async_write_some(buffers, yield);
   }
 
-  [[nodiscard]] auto GetExecutor() { return socket_.get_executor(); }
+  executor_type getExecutor() { return mSocket.get_executor(); }
 
-  [[nodiscard]] bool IsOpen() const { return socket_.is_open(); }
+  [[nodiscard]] bool isOpen() const { return mSocket.is_open(); }
 
   void Close() {
-    socket_.shutdown(tcp::socket::shutdown_send);
-    socket_.shutdown(tcp::socket::shutdown_receive);
-    socket_.close();
+    mSocket.shutdown(tcp::socket::shutdown_send);
+    mSocket.shutdown(tcp::socket::shutdown_receive);
+    mSocket.close();
   }
 
 private:
-  tcp::socket socket_;
-  std::string bucket_{};
+  tcp::socket mSocket;
+  std::string mBucket{};
   boost::asio::dynamic_string_buffer<char, std::char_traits<char>,
                                      std::allocator<char>>
-      read_buffer_{bucket_};
+      mReadBuffer{mBucket};
 };
 
 } // namespace empty_d::network
+
