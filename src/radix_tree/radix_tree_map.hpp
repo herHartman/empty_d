@@ -10,8 +10,8 @@
 #include <stdexcept>
 #include <string>
 
-namespace empty_d {
-namespace radix_tree {
+
+namespace empty_d::radix_tree {
 
 template <typename Key> struct prefix_comparator {
   using key_iterator = typename Key::const_iterator;
@@ -25,7 +25,7 @@ template <typename Key> struct prefix_comparator {
   };
 
   result_type FindCommonPrefix(const key_type &key,
-                               const key_type &request_path) {
+                               const key_type &request_path) const {
     size_type i1 = 0;
     size_type i2 = 0;
     match_state s = START_SEGMENT;
@@ -319,5 +319,5 @@ public:
     return boost::none;
   }
 };
-} // namespace radix_tree
-} // namespace empty_d
+} // namespace empty_d::radix_tree
+

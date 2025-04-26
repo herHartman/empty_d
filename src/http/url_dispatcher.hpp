@@ -22,12 +22,6 @@ struct PathArg {
   size_t segment_pos;
 };
 
-template <typename T> struct type_from_member;
-
-template <typename M, typename T> struct type_from_member<M T::*> {
-  using type = T;
-};
-
 class Resource {
 public:
   explicit Resource(std::string path, std::vector<PathArg> expectedArgs)

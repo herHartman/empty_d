@@ -20,54 +20,51 @@ namespace empty_d::http {
 using FixedBodyHttpHandler = std::function<HttpResponse(
     empty_d::http::request::HttpRequest &, boost::asio::yield_context yield)>;
 
-void HttpConnection::HandleRequest(HttpRequest &request) {
-  // std::optional<Resource> resource = request_parser_.GetResource();
-  // if (!resource) {
-  //   throw std::runtime_error("resource is required");
-  // }
-
-  // HttpHandler handler = resource->GetHandler(request.GetMethod());
-  // HttpResponse response = co_await handler(request);
-  // write_buffer_.append(response.SerializeResponse());
-  // response_awaiter_.try_send(0, 0);
-}
-
 void HttpConnection::readRequestBody(
     boost::asio::yield_context yield,
     std::shared_ptr<request::HttpBodyStreamReader> body) {
-  while (!body->isEof()) {
-    size_t limit = read_buffer_.max_size() - read_buffer_.size();
-    size_t max_size = 65536;
-    size_t read_size = std::min(std::max<size_t>(512, read_buffer_.capacity()),
-                                std::min(limit, max_size));
 
-    read_buffer_.prepare(read_size);
-    boost::asio::async_read(socket_, read_buffer_, yield);
-    read_buffer_.commit(read_size);
+  boost::asio::socket_base::receive_buffer_size option;
+  socket_.get_option(option);
+  size_t osBufferSize = option.value();
+  
+  while (!body->isEof()) {
+    size_t availableSpace = read_buffer_.max_size() - read_buffer_.size();
+    size_t readSize = std::min(availableSpace, osBufferSize);
+
+    // Читаем данные (async_read_some)
+    boost::asio::mutable_buffer buffer = read_buffer_.prepare(readSize);
+    size_t bytesTransferred =
+        socket_.async_read_some(boost::asio::buffer(buffer), yield);
+
+    // Фиксируем прочитанные данные
+    read_buffer_.commit(bytesTransferred);
     body->write(bucket_, yield);
-    bucket_.clear();
-    read_buffer_.commit(0);
+    read_buffer_.consume(readSize);
   }
 }
 
 void HttpConnection::handle(boost::asio::yield_context yield) {
+  boost::asio::socket_base::receive_buffer_size option;
+  socket_.get_option(option);
+  size_t osBufferSize = option.value();
+
   try {
     while (!request_parser_.ParseComplete()) {
-      size_t limit = read_buffer_.max_size() - read_buffer_.size();
-      size_t max_size = 65536;
-      size_t read_size =
-          std::min(std::max<size_t>(512, read_buffer_.capacity()),
-                   std::min(limit, max_size));
 
-      read_buffer_.prepare(read_size);
-      boost::system::error_code ec;
-      size_t size = boost::asio::async_read(socket_, read_buffer_, yield[ec]);
-      if (ec) {
-        return;
-      }
-      read_buffer_.commit(read_size);
-      request_parser_.Parse(bucket_.data(), size);
-      read_buffer_.consume(read_size);
+      // Рассчитываем размер чтения
+      size_t availableSpace = read_buffer_.max_size() - read_buffer_.size();
+      size_t readSize = std::min(availableSpace, osBufferSize);
+
+      // Читаем данные (async_read_some)
+      boost::asio::mutable_buffer buffer = read_buffer_.prepare(readSize);
+      size_t bytesTransferred =
+          socket_.async_read_some(boost::asio::buffer(buffer), yield);
+
+      // Фиксируем прочитанные данные
+      read_buffer_.commit(bytesTransferred);
+      request_parser_.Parse(bucket_.data(), bytesTransferred);
+      read_buffer_.consume(readSize);
     }
   } catch (const std::exception &e) {
     std::printf("echo Exception: %s\n", e.what());
@@ -84,12 +81,13 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
       [this, body_reader](boost::asio::yield_context yield) mutable {
         readRequestBody(yield, body_reader);
       });
-      
+
   socket_.close();
 }
 
-void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler, HttpRequest& request, boost::asio::yield_context yield)
-{
+void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler,
+                                    HttpRequest &request,
+                                    boost::asio::yield_context yield) {
   HttpResponse response = handler->handleRequest(request, yield);
   boost::asio::async_write(
       socket_, boost::asio::buffer(response.serializeHeaders()), yield);
@@ -97,18 +95,20 @@ void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler, Ht
       socket_, boost::asio::buffer(response.serializeResponse()), yield);
 }
 
-void HttpConnection::processRequest(std::unique_ptr<StreamResponseHttpHandlerBase> handler, HttpRequest& request, boost::asio::yield_context yield)
-{
+void HttpConnection::processRequest(
+    std::unique_ptr<StreamResponseHttpHandlerBase> handler,
+    HttpRequest &request, boost::asio::yield_context yield) {
   StreamHttpResponse response;
-  boost::asio::spawn(
-      socket_.get_executor(),
-      [this, handler = std::move(handler), &request, &response](boost::asio::yield_context yield) mutable {
-        handler->handleRequest(request, response, yield);
-      });
+  boost::asio::spawn(socket_.get_executor(),
+                     [this, handler = std::move(handler), &request,
+                      &response](boost::asio::yield_context yield) mutable {
+                       handler->handleRequest(request, response, yield);
+                     });
 
   response.awaitEndOfHeaders(yield);
-  boost::asio::async_write(socket_, boost::asio::buffer(response.serializeHeaders()), yield);
-  
+  boost::asio::async_write(
+      socket_, boost::asio::buffer(response.serializeHeaders()), yield);
+
   while (not response.isEndOfStream(yield)) {
     std::string nextChunk = response.readChunk(yield);
     boost::asio::async_write(socket_, boost::asio::buffer(nextChunk), yield);

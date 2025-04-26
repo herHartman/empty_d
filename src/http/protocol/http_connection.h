@@ -18,8 +18,7 @@ class HttpConnection : public std::enable_shared_from_this<HttpConnection> {
 public:
   explicit HttpConnection(protocol::parser::HttpRequestParser request_parser,
                           tcp::socket socket)
-      : request_parser_(std::move(request_parser)), socket_(std::move(socket)),
-        write_buffer_{} {}
+      : request_parser_(std::move(request_parser)), socket_(std::move(socket)) {}
 
   void readRequestBody(boost::asio::yield_context yield,
                        std::shared_ptr<request::HttpBodyStreamReader> body);
@@ -40,9 +39,6 @@ private:
   boost::asio::dynamic_string_buffer<char, std::char_traits<char>,
                                      std::allocator<char>>
       read_buffer_{bucket_};
-
-  void HandleRequest(HttpRequest &request);
-  std::string write_buffer_;
 };
 } // namespace empty_d::http
 
