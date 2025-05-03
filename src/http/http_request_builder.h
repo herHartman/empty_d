@@ -1,8 +1,8 @@
 #pragma once
 
 #include "http/http_headers.h"
-#include "http/protocol/http_body_stream_reader.h"
-#include "http/protocol/http_methods.h"
+#include "http/http_body_stream_reader.h"
+#include "http/http_methods.h"
 #include "http/url_dispatcher.hpp"
 #include <boost/optional.hpp>
 #include "http_request.h"

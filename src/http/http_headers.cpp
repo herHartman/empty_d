@@ -1,49 +1,110 @@
 #include "http_headers.h"
-#include <sstream>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <iterator>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace empty_d::http {
 
-void HttpHeaders::Set(const HeaderKey &key, HeaderValue value) {
-  headers_.erase(key);
-  std::vector<HeaderValue> values{std::move(value)};
-  values.reserve(1);
-  headers_[key] = values;
+HttpHeaders::Iterator HttpHeaders::begin() noexcept { return mHeaders.begin(); }
+
+HttpHeaders::Iterator HttpHeaders::end() noexcept { return mHeaders.end(); }
+
+HttpHeaders::ConstIterator HttpHeaders::begin() const noexcept {
+  return mHeaders.begin();
 }
 
-void HttpHeaders::Set(const HeaderKey &key, std::vector<HeaderValue> values) {
-  headers_.erase(key);
-  headers_[key] = std::move(values);
+HttpHeaders::ConstIterator HttpHeaders::end() const noexcept {
+  return mHeaders.end();
 }
 
-void HttpHeaders::Add(const HeaderKey &key, HeaderValue value) {
-  auto entry = headers_.find(key);
-  if (entry == headers_.end()) {
-    Set(key, std::move(value));
+HttpHeaders::ConstIterator HttpHeaders::cbegin() const noexcept {
+  return mHeaders.cbegin();
+}
+HttpHeaders::ConstIterator HttpHeaders::cend() const noexcept {
+  return mHeaders.cend();
+}
+
+HttpHeaders::Iterator HttpHeaders::find(const HeaderKey &key) {
+  return mHeaders.find(key);
+}
+
+HttpHeaders::ConstIterator HttpHeaders::find(const HeaderKey &key) const {
+  return mHeaders.find(key);
+}
+
+HeaderValues &HttpHeaders::headers() noexcept { return mHeaders; }
+
+const HeaderValues &HttpHeaders::headers() const noexcept { return mHeaders; }
+
+bool HttpHeaders::empty() const noexcept { return mHeaders.empty(); }
+
+size_t HttpHeaders::size() const noexcept { return mHeaders.size(); }
+
+HttpHeaders::Iterator HttpHeaders::erase(ConstIterator pos) {
+  return mHeaders.erase(pos);
+}
+
+size_t HttpHeaders::erase(const HeaderKey &key) { return mHeaders.erase(key); }
+
+void HttpHeaders::clear() noexcept { mHeaders.clear(); }
+
+void HttpHeaders::set(const HeaderKey &key, HeaderValue value) {
+  mHeaders[key].clear();
+  mHeaders.insert({key, {std::move(value)}});
+}
+
+void HttpHeaders::set(const HeaderKey &key, std::vector<HeaderValue> values) {
+  mHeaders[key] = std::move(values);
+}
+
+void HttpHeaders::add(const HeaderKey &key, HeaderValue value) {
+  auto entry = mHeaders.find(key);
+  if (entry == mHeaders.end()) {
+    set(key, std::move(value));
   } else {
-    entry->second.push_back(std::move(value));
+    entry->second.emplace_back(std::move(value));
   }
 }
 
-void HttpHeaders::Add(const HeaderKey &key, std::vector<HeaderValue> values) {
-  auto entry = headers_.find(key);
-  if (entry == headers_.end()) {
-    Set(key, std::move(values));
+void HttpHeaders::add(const HeaderKey &key, std::vector<HeaderValue> values) {
+  auto entry = mHeaders.find(key);
+  if (entry == mHeaders.end()) {
+    set(key, std::move(values));
   } else {
-    for (const auto &iter : values) {
-      entry->second.push_back(iter);
+    for (auto iter : values) {
+      entry->second.emplace_back(std::move(iter));
     }
   }
 }
 
-std::vector<HeaderValue> &HttpHeaders::GetHeaderValues(const HeaderKey &key) {
-  return headers_[key];
+void HttpHeaders::setBasicAuth(std::string username, std::string password) {}
+
+void HttpHeaders::setBearerAuth(std::string token) {}
+
+void HttpHeaders::setConnection(std::string connection) {}
+
+void HttpHeaders::setContentLength(std::size_t contentSize) {}
+
+void HttpHeaders::setContentType(std::string mediaType) {}
+
+void HttpHeaders::setDate(std::string date) {}
+
+void HttpHeaders::setHost(std::string host) {}
+
+void HttpHeaders::setLocation(std::string location) {}
+
+void HttpHeaders::setOrigin(std::string origin) {}
+
+std::vector<HeaderValue> &HttpHeaders::getHeaderValues(const HeaderKey &key) {
+  return mHeaders[key];
 }
 
-size_t HttpHeaders::GetContentLength() {
-  auto &content_length_vec = headers_[BasicHeaders::kContentLength];
+size_t HttpHeaders::getContentLength() const {
+  const auto &content_length_vec = mHeaders.at(BasicHeaders::kContentLength);
   if (!content_length_vec.empty()) {
     auto &content_legnth_str = content_length_vec.back();
     return std::stoi(content_legnth_str);
@@ -51,19 +112,49 @@ size_t HttpHeaders::GetContentLength() {
   return 0;
 }
 
-std::string &HttpHeaders::GetHost() {
-  auto &host_vec = headers_[BasicHeaders::kHost];
-  if (host_vec.empty()) {
-    host_vec.emplace_back();
-  }
+const std::string& HttpHeaders::getContentType() const {
+  
+}
+
+const std::string &HttpHeaders::getHost() const {
+  const auto &host_vec = mHeaders.at(BasicHeaders::kHost);
   return host_vec.back();
 }
 
-std::string HttpHeaders::FormatHeaders() const {
-  std::stringstream buf;
-  for (const auto &header : headers_) {
-  }
-  buf << "\r\n";
-  return buf.str();
+bool HttpHeaders::canCominedHeaders(const std::string &headerKey) {
+  static const std::unordered_set<std::string> nonCominableHeaders = {
+      BasicHeaders::kSetCookie,
+      BasicHeaders::kWWWAuthenticate,
+      BasicHeaders::kProxyAuthenticate,
+      BasicHeaders::kLink,
+      BasicHeaders::kVary,
+      BasicHeaders::kStrictTransportSecurity};
+
+  return nonCominableHeaders.find(headerKey) == nonCominableHeaders.end();
 }
+
+std::string HttpHeaders::formatHeaders() const {
+  return boost::algorithm::join(
+             mHeaders | boost::adaptors::transformed([](const auto &entry) {
+               if (not canCominedHeaders(entry.first)) {
+                 return boost::algorithm::join(
+                     entry.second | boost::adaptors::transformed(
+                                        [&entry](const std::string &value) {
+                                          return entry.first + ": " + value;
+                                        }),
+                     "\r\n");
+               } else {
+                 return entry.first + ": " +
+                        boost::algorithm::join(entry.second, ", ");
+               }
+             }),
+             "\r\n") +
+         "\r\n\r\n";
+}
+
+void HttpHeaders::addHeaders(HttpHeaders headers) {
+  mHeaders.insert(std::make_move_iterator(headers.begin()),
+                  std::make_move_iterator(headers.end()));
+}
+
 } // namespace empty_d::http

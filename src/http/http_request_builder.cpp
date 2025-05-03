@@ -1,5 +1,5 @@
 #include "http_request_builder.h"
-#include "http/protocol/http_body_stream_reader.h"
+#include "http/http_body_stream_reader.h"
 #include "http/url_dispatcher.hpp"
 #include <memory>
 #include <stdexcept>
@@ -13,7 +13,7 @@ void HttpRequestBuilder::AppendHeaderField(const std::string &header_field) {
 
 void HttpRequestBuilder::AppendHeaderValue(const std::string &header_value) {
   if (current_header_field_) {
-    headers_.Add(current_header_field_.value(), header_value);
+    headers_.add(current_header_field_.value(), header_value);
   } else {
     throw std::runtime_error("header require");
   }
@@ -53,7 +53,7 @@ void HttpRequestBuilder::AppendQuery(
 
 void HttpRequestBuilder::AppendHeader(const std::string &header_field,
                                       const std::string &header_value) {
-  headers_.Add(header_field, header_value);
+  headers_.add(header_field, header_value);
 }
 
 void HttpRequestBuilder::AppendBody(const std::string &body) {
@@ -74,8 +74,8 @@ std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
     throw std::runtime_error("need path or version");
   }
 
-  size_t content_length = headers_.GetContentLength();
-  std::string &host = headers_.GetHost();
+  size_t content_length = headers_.getContentLength();
+  const std::string &host = headers_.getHost();
   return {HttpRequest{content_length,
                      method_.value(),
                      std::move(headers_),

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "http/http_methods.h"
+#include "http/http_request.h"
 #include "http/http_response.hpp"
-#include "http/protocol/http_methods.h"
-#include "http/protocol/request/http_request.h"
 #include "radix_tree/radix_tree_map.hpp"
 #include <array>
 #include <boost/asio/spawn.hpp>
@@ -15,7 +15,9 @@
 namespace empty_d::http {
 
 class HttpConnection;
-using HttpHandler = std::function<void(std::shared_ptr<HttpConnection>, request::HttpRequest&, boost::asio::yield_context yield)>;
+using HttpHandler =
+    std::function<void(std::shared_ptr<HttpConnection>, request::HttpRequest &,
+                       boost::asio::yield_context yield)>;
 
 struct PathArg {
   std::string arg_name;
@@ -27,8 +29,13 @@ public:
   explicit Resource(std::string path, std::vector<PathArg> expectedArgs)
       : mPath(std::move(path)), mExpectedArgs{std::move(expectedArgs)} {}
 
-  void addHandler(HttpHandler &handler, HttpMethods method);
-  HttpHandler getHandler(HttpMethods method);
+  void addHandler(HttpHandler &handler, HttpMethods method) {
+    mHandlers[static_cast<size_t>(method)] = handler;
+  }
+
+  HttpHandler getHandler(HttpMethods method) {
+    return mHandlers[static_cast<size_t>(method)];
+  }
 
   [[nodiscard]] const std::vector<PathArg> &getPathArgs() const {
     return mExpectedArgs;

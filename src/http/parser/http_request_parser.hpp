@@ -1,8 +1,8 @@
 #pragma once
 
-#include "http/protocol/parser/http_parser/http_parser.h"
-#include "http/protocol/request/http_request.h"
-#include "http/protocol/request/http_request_builder.h"
+#include "http/parser/http_parser/http_parser.h"
+#include "http/http_request.h"
+#include "http/http_request_builder.h"
 #include "http/url_dispatcher.hpp"
 
 using empty_d::http::request::HttpRequest;

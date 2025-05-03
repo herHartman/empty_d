@@ -5,6 +5,7 @@
 #include <vector>
 
 namespace empty_d::http {
+
 typedef std::string HeaderValue;
 typedef std::string HeaderKey;
 typedef std::unordered_map<HeaderKey, std::vector<HeaderValue>> HeaderValues;
@@ -16,6 +17,28 @@ public:
 
   using iterator = Iterator;
   using const_iterator = ConstIterator;
+
+  Iterator begin() noexcept;
+  Iterator end() noexcept;
+
+  ConstIterator begin() const noexcept;
+  ConstIterator end() const noexcept;
+
+  ConstIterator cbegin() const noexcept;
+  ConstIterator cend() const noexcept;
+
+  Iterator find(const HeaderKey &key);
+  ConstIterator find(const HeaderKey &key) const;
+
+  HeaderValues &headers() noexcept;
+  const HeaderValues &headers() const noexcept;
+
+  bool empty() const noexcept;
+  size_t size() const noexcept;
+
+  Iterator erase(ConstIterator pos);
+  size_t erase(const HeaderKey &key);
+  void clear() noexcept;
 
   struct BasicHeaders {
     static constexpr char kAccept[] = "Accept";
@@ -31,32 +54,45 @@ public:
     static constexpr char kConnection[] = "Connection";
     static constexpr char kContentLength[] = "Content-Length";
     static constexpr char kHost[] = "Host";
+    static constexpr char kSetCookie[] = "Set-Cookie";
+    static constexpr char kWWWAuthenticate[] = "WWW-Authenticate";
+    static constexpr char kProxyAuthenticate[] = "Proxy-Authenticate";
+    static constexpr char kLink[] = "Link";
+    static constexpr char kVary[] = "Vary";
+    static constexpr char kStrictTransportSecurity[] =
+        "Strict-Transport-Security";
   };
 
-  void Set(const HeaderKey &key, HeaderValue value);
-  void Set(const HeaderKey &key, std::vector<HeaderValue> values);
+  void set(const HeaderKey &key, HeaderValue value);
+  void set(const HeaderKey &key, std::vector<HeaderValue> values);
 
-  void Add(const HeaderKey &key, HeaderValue value);
-  void Add(const HeaderKey &key, std::vector<HeaderValue> values);
+  void add(const HeaderKey &key, HeaderValue value);
+  void add(const HeaderKey &key, std::vector<HeaderValue> values);
 
-  void SetBasicAuth(const std::string &username, const std::string &password);
-  void SetBearerAuth(const std::string &token);
-  void SetConnection(const std::string &connection);
-  void SetContentLength(std::size_t content_size);
-  void SetContentType(const std::string &media_type);
-  void SetDate(const std::string &date);
-  void SetHost(const std::string &host);
-  void SetLocation(const std::string &location);
-  void SetOrigin(const std::string &origin);
+  void setBasicAuth(std::string username, std::string password);
+  void setBearerAuth(std::string token);
+  void setConnection(std::string connection);
+  void setContentLength(std::size_t contentSize);
+  void setContentType(std::string mediaType);
+  void setDate(std::string date);
+  void setHost(std::string host);
+  void setLocation(std::string location);
+  void setOrigin(std::string origin);
 
-  size_t GetContentLength();
-  std::string &GetHost();
+  size_t getContentLength() const;
+  const std::string &getHost() const;
 
-  std::vector<HeaderValue> &GetHeaderValues(const HeaderKey &key);
-  std::string FormatHeaders() const;
+  std::vector<HeaderValue> &getHeaderValues(const HeaderKey &key);
+  std::string formatHeaders() const;
+
+  const std::string &getContentType() const;
+
+  void addHeaders(HttpHeaders headers);
 
 private:
-  HeaderValues headers_{};
+  static bool canCominedHeaders(const std::string &headerKey);
+
+  HeaderValues mHeaders{};
 };
 
 } // namespace empty_d::http

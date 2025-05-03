@@ -1,9 +1,4 @@
-//
-// Created by chopk on 31.03.24.
-//
-
-#ifndef SIMPLE_HTTP_SERVER_ICHAR_TRAITS_H
-#define SIMPLE_HTTP_SERVER_ICHAR_TRAITS_H
+#pragma once
 
 #include <string>
 
@@ -47,6 +42,3 @@ namespace empty_d::strings {
         return os.write(os.data(), str.size());
     }
 }
-
-
-#endif //SIMPLE_HTTP_SERVER_ICHAR_TRAITS_H

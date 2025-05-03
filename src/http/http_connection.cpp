@@ -1,4 +1,4 @@
-#include "http/protocol/http_connection.h"
+#include "http/http_connection.h"
 #include "http/http_response.hpp"
 #include "http/url_dispatcher.hpp"
 #include <algorithm>
@@ -17,9 +17,6 @@
 
 namespace empty_d::http {
 
-using FixedBodyHttpHandler = std::function<HttpResponse(
-    empty_d::http::request::HttpRequest &, boost::asio::yield_context yield)>;
-
 void HttpConnection::readRequestBody(
     boost::asio::yield_context yield,
     std::shared_ptr<request::HttpBodyStreamReader> body) {
@@ -27,8 +24,8 @@ void HttpConnection::readRequestBody(
   boost::asio::socket_base::receive_buffer_size option;
   socket_.get_option(option);
   size_t osBufferSize = option.value();
-  
-  while (!body->isEof()) {
+
+  while (not body->isEof()) {
     size_t availableSpace = read_buffer_.max_size() - read_buffer_.size();
     size_t readSize = std::min(availableSpace, osBufferSize);
 
@@ -50,7 +47,7 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
   size_t osBufferSize = option.value();
 
   try {
-    while (!request_parser_.ParseComplete()) {
+    while (not request_parser_.ParseComplete()) {
 
       // Рассчитываем размер чтения
       size_t availableSpace = read_buffer_.max_size() - read_buffer_.size();
@@ -74,13 +71,15 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
       request_parser_.BuildRequest();
 
   std::shared_ptr<request::HttpBodyStreamReader> body_reader =
-      buidRequestResult.first.GetStreamReader();
+      buidRequestResult.first.getStreamReader();
 
   boost::asio::spawn(
       socket_.get_executor(),
       [this, body_reader](boost::asio::yield_context yield) mutable {
         readRequestBody(yield, body_reader);
       });
+
+  buidRequestResult.second(shared_from_this(), buidRequestResult.first, yield);
 
   socket_.close();
 }
@@ -89,30 +88,7 @@ void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler,
                                     HttpRequest &request,
                                     boost::asio::yield_context yield) {
   HttpResponse response = handler->handleRequest(request, yield);
-  boost::asio::async_write(
-      socket_, boost::asio::buffer(response.serializeHeaders()), yield);
-  boost::asio::async_write(
-      socket_, boost::asio::buffer(response.serializeResponse()), yield);
-}
-
-void HttpConnection::processRequest(
-    std::unique_ptr<StreamResponseHttpHandlerBase> handler,
-    HttpRequest &request, boost::asio::yield_context yield) {
-  StreamHttpResponse response;
-  boost::asio::spawn(socket_.get_executor(),
-                     [this, handler = std::move(handler), &request,
-                      &response](boost::asio::yield_context yield) mutable {
-                       handler->handleRequest(request, response, yield);
-                     });
-
-  response.awaitEndOfHeaders(yield);
-  boost::asio::async_write(
-      socket_, boost::asio::buffer(response.serializeHeaders()), yield);
-
-  while (not response.isEndOfStream(yield)) {
-    std::string nextChunk = response.readChunk(yield);
-    boost::asio::async_write(socket_, boost::asio::buffer(nextChunk), yield);
-  }
+  response.sendResponse(socket_, yield);
 }
 
 } // namespace empty_d::http

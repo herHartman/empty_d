@@ -1,6 +1,6 @@
 #pragma once
 
-#include "http/protocol/parser/http_request_parser.hpp"
+#include "http/parser/http_request_parser.hpp"
 
 namespace empty_d::http {
 class BaseHttpMiddleware {

@@ -1,6 +1,6 @@
 
 #include "http/http_server.h"
-#include "http/protocol/http_connection.h"
+#include "http/http_connection.h"
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -11,17 +11,15 @@
 
 namespace empty_d::http {
 
-ConnectionsManager::ConnectionsManager(boost::asio::io_context &ioContext)
-    : mIOContext(ioContext), mActiveConnections{} {}
 
 void ConnectionsManager::startHandleConnection(
-    std::shared_ptr<HttpConnection> connection) {
+    std::shared_ptr<HttpConnection> connection, const boost::asio::any_io_executor& io) {
   {
     std::lock_guard<std::mutex> lock{mConnectionsMutex};
     mActiveConnections.insert(connection);
   }
 
-  boost::asio::spawn(mIOContext,
+  boost::asio::spawn(io,
                      [this, connection](boost::asio::yield_context yield) {
                        try {
                          connection->handle(yield);
@@ -37,7 +35,7 @@ void ConnectionsManager::startHandleConnection(
 }
 
 void ConnectionsManager::stopHandleConnection(
-    std::shared_ptr<HttpConnection> connection) {}
+    std::shared_ptr<HttpConnection> connection, boost::asio::io_context& IOContext) {}
 
 void ConnectionsManager::stopAll() {}
 
@@ -46,7 +44,7 @@ void HttpServer::acceptLoop(boost::asio::yield_context yield) {
     auto socket = mAcceptor.async_accept(yield);
     auto connection = std::make_shared<HttpConnection>(
         protocol::parser::HttpRequestParser{mUrlDispatcher}, std::move(socket));
-    mConnectionsManager.startHandleConnection(connection);
+    mConnectionsManager.startHandleConnection(connection, mAcceptor.get_executor());
   }
 }
 

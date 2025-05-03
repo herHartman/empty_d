@@ -1,7 +1,7 @@
 #pragma once
 
 #include "http/http_response.hpp"
-#include "http/protocol/parser/http_request_parser.hpp"
+#include "http/parser/http_request_parser.hpp"
 #include "http/url_dispatcher.hpp"
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
@@ -32,7 +32,6 @@ public:
   void processRequest(std::unique_ptr<StreamResponseHttpHandlerBase> handler, HttpRequest& request, boost::asio::yield_context yield);
 
 private:
-  
   tcp::socket socket_;
   protocol::parser::HttpRequestParser request_parser_;
   std::string bucket_{};

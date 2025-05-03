@@ -1,9 +1,12 @@
-// #include "network/tcp_server.h"
+#include "http/http_methods.h"
 #include "http/http_response.hpp"
+#include "http/http_server.h"
 #include "http/http_status.h"
-#include "http/protocol/http_methods.h"
 #include "http/url_dispatcher.hpp"
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/assert/source_location.hpp>
+#include <boost/describe.hpp>
 #include <boost/json.hpp>
 #include <memory>
 
@@ -26,12 +29,64 @@ const char *kRawRequest =
     "Connection: keep-alive\r\n"
     "\r\n";
 
+struct PaginationParams {
+  uint32_t perPage{0};
+  uint32_t pageNumber{0};
+};
+
+struct AuthCredentionals {
+  std::string username;
+  std::string password;
+};
+
+BOOST_DESCRIBE_STRUCT(AuthCredentionals, (), (username, password))
+
+BOOST_DESCRIBE_STRUCT(PaginationParams, (), (perPage, pageNumber))
+
+struct GetFileListingRequest {
+  AuthCredentionals authCredentionals;
+  PaginationParams pagination;
+  std::string repositoryCreatedStartDate;
+  std::string repositoryCreatedEndDate;
+  std::string resourceName;
+};
+
+BOOST_DESCRIBE_STRUCT(GetFileListingRequest, (),
+                      (authCredentionals, pagination,
+                       repositoryCreatedStartDate, repositoryCreatedEndDate,
+                       resourceName))
+
+const static char *kUsernameArg = "username";
+
+class TestHandler : public empty_d::http::HttpHandlerBase {
+
+public:
+  auto handleRequest(empty_d::http::request::HttpRequest &request,
+                     boost::asio::yield_context yield)
+      -> empty_d::http::HttpResponse override {
+    
+    auto useranme = request.getQueryArg<std::string>(kUsernameArg);
+
+    auto requestBody = request.ReadBody<GetFileListingRequest>(yield);
+    // тут какая-то очень сложная логика
+
+    empty_d::http::HttpResponse response;
+    response.setStatus(empty_d::http::HttpStatus::HTTP_OK);
+    auto responseBody = std::make_unique<empty_d::http::TextResponseBody>();
+    responseBody->setBody(std::move(requestBody));
+    return response;
+  }
+};
+
+
 int main() {
-  // auto url_dispatcher = std::make_shared<empty_d::http::UrlDispatcher>();
-  // empty_d::http::WebApplication application("127.0.0.1", "8001", 10000,
-  //                                           url_dispatcher);
-  // application.AddHandler(handler, empty_d::http::HttpMethods::HTTP_GET,
-  //                        "api/v1/test");
-  // application.Run();
+  auto url_dispatcher = std::make_shared<empty_d::http::UrlDispatcher>();
+  std::shared_ptr<empty_d::http::HttpServer> server =
+      std::make_shared<empty_d::http::HttpServer>(16, "127.0.0.1", "8001",
+                                                  url_dispatcher);
+  server->registerHandler<TestHandler>(empty_d::http::HttpMethods::HTTP_POST,
+                                       "/api/v1/test_path");
+  server->start();
+
   return 0;
 }

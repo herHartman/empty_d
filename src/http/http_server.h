@@ -1,9 +1,10 @@
 #pragma once
 
 #include "http/http_response.hpp"
-#include "http/protocol/http_connection.h"
+#include "http/http_connection.h"
 #include "http/url_dispatcher.hpp"
 #include <boost/asio.hpp>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/coroutine.hpp>
@@ -18,7 +19,6 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <memory>
 #include <mutex>
-#include <type_traits>
 #include <unordered_set>
 #include <utility>
 
@@ -29,29 +29,26 @@ namespace empty_d::http {
 
 class ConnectionsManager {
 public:
-  explicit ConnectionsManager(boost::asio::io_context &ioContext);
-  void startHandleConnection(std::shared_ptr<HttpConnection> connection);
-  void stopHandleConnection(std::shared_ptr<HttpConnection> connection);
+  void startHandleConnection(std::shared_ptr<HttpConnection> connection, const boost::asio::any_io_executor& io);
+  void stopHandleConnection(std::shared_ptr<HttpConnection> connection, boost::asio::io_context& IOContext);
   void stopAll();
 
 private:
   std::unordered_set<std::shared_ptr<HttpConnection>> mActiveConnections;
-  boost::asio::io_context &mIOContext;
   std::mutex mConnectionsMutex;
 };
 
 class HttpServer : std::enable_shared_from_this<HttpServer> {
 public:
-  explicit HttpServer(size_t threadPoolSize, std::string address,
+  HttpServer(size_t threadPoolSize, std::string address,
                       std::string port,
                       std::shared_ptr<UrlDispatcher> urlDispatcher,
-                      boost::asio::io_context &ioContext,
                       size_t maxRequests = 1000)
       : mPool(threadPoolSize),
         mAcceptor(boost::asio::make_strand(mPool.get_executor())),
         mRequestsCount(0), mIsRunning(false), mMaxRequests(maxRequests),
         mPort(std::move(port)), mUrlDispatcher(std::move(urlDispatcher)),
-        mAddress(std::move(address)), mConnectionsManager(ioContext) {}
+        mAddress(std::move(address)) {}
 
   void start();
 
@@ -62,10 +59,10 @@ public:
     auto handleRequest =
         [&args...](std::shared_ptr<HttpConnection> connection,
                    HttpRequest &request,
-                   boost::asio::yield_context yield) mutable -> HttpResponse {
+                   boost::asio::yield_context yield) mutable -> void {
       std::unique_ptr<Handler> handler =
           std::make_unique<Handler>(std::forward<Args>(args)...);
-      connection->processRequest(handler, request, yield);
+      connection->processRequest(std::move(handler), request, yield);
     };
     mUrlDispatcher->addHandler(handleRequest, method, path);
   }

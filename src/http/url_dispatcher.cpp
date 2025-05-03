@@ -1,14 +1,12 @@
 #include "url_dispatcher.hpp"
-#include "http/protocol/http_methods.h"
+#include "http/http_methods.h"
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/lexical_cast.hpp>
 #include <cstddef>
 #include <vector>
 
 namespace empty_d::http {
-
-HttpHandler Resource::getHandler(HttpMethods method) {
-  return mHandlers[static_cast<size_t>(method)];
-}
 
 std::vector<std::string> UrlDispatcher::splitBySlash(const std::string &path) {
   std::vector<std::string> splitting_path;
@@ -18,8 +16,8 @@ std::vector<std::string> UrlDispatcher::splitBySlash(const std::string &path) {
 
 bool UrlDispatcher::isDynamicPathPart(const std::string &path_part) {
   if (path_part.size() > 2) {
-    return true;
-    // return path_part.starts_with('{') && path_part.ends_with('}');
+    return boost::starts_with(path_part, "{") &&
+           boost::ends_with(path_part, "}");
   }
   return false;
 }
@@ -35,7 +33,8 @@ void UrlDispatcher::addHandler(HttpHandler handler, HttpMethods method,
     size_t current_path_start_pos = 1;
     for (const auto &path_segment : splitting_path) {
       if (UrlDispatcher::isDynamicPathPart(path_segment)) {
-        PathArg arg{path_segment.substr(1, path_segment.size() - 1), current_path_start_pos};
+        PathArg arg{path_segment.substr(1, path_segment.size() - 1),
+                    current_path_start_pos};
         args.push_back(std::move(arg));
       }
       current_path_start_pos += path_segment.size();
