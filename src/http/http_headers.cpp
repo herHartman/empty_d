@@ -156,4 +156,8 @@ void HttpHeaders::addHeaders(HttpHeaders headers) {
                   std::make_move_iterator(headers.end()));
 }
 
+bool HttpHeaders::hasContentLength() const {
+  return mHeaders.find(BasicHeaders::kContentLength) != mHeaders.end();
+}
+
 } // namespace empty_d::http

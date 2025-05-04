@@ -17,7 +17,7 @@ public:
 
   enum class ParseQueryState { QUERY_NAME, QUERY_VALUE };
 
-  enum class ParseState { INITED, IN_PROGRESS, ERROR, COMPLETE };
+  enum class ParseState { INITED, IN_PROGRESS, ERROR, HEADERS_COMPLETE, COMPLETE };
 
   int onMessageBeginImpl(http_parser *parser);
   int onUrlImpl(http_parser *parser, const char *data, size_t lenght);

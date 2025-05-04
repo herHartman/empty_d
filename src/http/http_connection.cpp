@@ -7,8 +7,11 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/detail/chrono.hpp>
 #include <boost/asio/impl/spawn.hpp>
+#include <boost/asio/read_at.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/functional/overloaded_function.hpp>
@@ -22,28 +25,34 @@ HttpConnection::HttpConnection(std::shared_ptr<UrlDispatcher> urlDispatcher,
                                tcp::socket socket)
     : mUrlDispatcher(std::move(urlDispatcher)), mSocket(std::move(socket)) {}
 
+void HttpConnection::readAndParseData(
+    protocol::parser::HttpRequestParser &requestParser, size_t bufferSize,
+    boost::asio::yield_context yield) {
+  // Рассчитываем размер чтения
+  size_t availableSpace = mReadBuffer.max_size() - mReadBuffer.size();
+  size_t readSize = std::min(availableSpace, bufferSize);
+
+  // Читаем данные (async_read_some)
+  boost::asio::mutable_buffer buffer = mReadBuffer.prepare(readSize);
+  size_t bytesTransferred =
+      boost::asio::async_read(mSocket, boost::asio::buffer(buffer), yield);
+
+  // Фиксируем прочитанные данные
+  mReadBuffer.commit(bytesTransferred);
+  requestParser.parse(mBucket.data(), bytesTransferred);
+  mReadBuffer.consume(readSize);
+}
+
 void HttpConnection::readRequestBody(
     boost::asio::yield_context yield,
-    std::shared_ptr<request::HttpBodyStreamReader> body) {
+    protocol::parser::HttpRequestParser &parser) {
 
   boost::asio::socket_base::receive_buffer_size option;
   mSocket.get_option(option);
   size_t osBufferSize = option.value();
 
-  boost::asio::streambuf readBuf;
-  while (not body->isWriteComplete()) {
-    size_t availableSpace = readBuf.max_size() - readBuf.size();
-    size_t readSize = std::min(availableSpace, osBufferSize);
-
-    // Читаем данные (async_read_some)
-    size_t bytesTransferred =
-        mSocket.async_read_some(readBuf.prepare(readSize), yield);
-
-    // Фиксируем прочитанные данные
-    readBuf.commit(bytesTransferred);
-    body->write(boost::asio::buffers_begin(readBuf.data()),
-                boost::asio::buffers_end(readBuf.data()));
-    readBuf.consume(readSize);
+  while (not parser.parseComplete()) {
+    readAndParseData(parser, osBufferSize, yield);
   }
 }
 
@@ -55,36 +64,20 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
   http::protocol::parser::HttpRequestParser requestParser{
       mUrlDispatcher, mSocket.get_executor()};
 
+  boost::asio::steady_timer readTimer(mSocket.get_executor());
+  boost::system::error_code ec;
+
   while (not requestParser.parseComplete()) {
-    if (!mSocket.is_open()) {
-      throw boost::system::system_error(boost::asio::error::operation_aborted);
-    }
-
-    // Рассчитываем размер чтения
-    size_t availableSpace = mReadBuffer.max_size() - mReadBuffer.size();
-    size_t readSize = std::min(availableSpace, osBufferSize);
-
-    // Читаем данные (async_read_some)
-    boost::asio::mutable_buffer buffer = mReadBuffer.prepare(readSize);
-    size_t bytesTransferred =
-        mSocket.async_read_some(boost::asio::buffer(buffer), yield);
-
-    // Фиксируем прочитанные данные
-    mReadBuffer.commit(bytesTransferred);
-    requestParser.parse(mBucket.data(), bytesTransferred);
-    mReadBuffer.consume(readSize);
+    readAndParseData(requestParser, osBufferSize, yield);
   }
 
   std::pair<HttpRequest, empty_d::http::HttpHandler> buidRequestResult =
       requestParser.buildRequest();
 
-  std::shared_ptr<request::HttpBodyStreamReader> body_reader =
-      buidRequestResult.first.getStreamReader();
-
   boost::asio::spawn(
       mSocket.get_executor(),
-      [this, body_reader](boost::asio::yield_context yield) mutable {
-        readRequestBody(yield, body_reader);
+      [this, &requestParser](boost::asio::yield_context yield) mutable {
+        readRequestBody(yield, requestParser);
       });
 
   buidRequestResult.second(shared_from_this(), buidRequestResult.first, yield);

@@ -16,7 +16,7 @@ public:
                  tcp::socket socket);
 
   void readRequestBody(boost::asio::yield_context yield,
-                       std::shared_ptr<request::HttpBodyStreamReader> body);
+                       protocol::parser::HttpRequestParser &requestParser);
   void handle(boost::asio::yield_context yield);
 
   void ConnectionMade() {}
@@ -29,6 +29,9 @@ public:
                       HttpRequest &request, boost::asio::yield_context yield);
 
 private:
+  void readAndParseData(protocol::parser::HttpRequestParser &requestParser,
+                        size_t bufferSize, boost::asio::yield_context yield);
+
   std::shared_ptr<UrlDispatcher> mUrlDispatcher;
   tcp::socket mSocket;
   std::string mBucket{};

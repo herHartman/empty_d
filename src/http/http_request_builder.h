@@ -28,7 +28,7 @@ public:
   void AppendHeader(const std::string &header_field,
                     const std::string &header_value);
   void AppendBody(std::string body);
-
+  void onHeadersComplete();
   std::pair<HttpRequest, HttpHandler> BuildRequest();
 
   boost::optional<Resource> GetResource() const;

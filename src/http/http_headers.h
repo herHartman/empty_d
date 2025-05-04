@@ -88,6 +88,7 @@ public:
   const std::string &getContentType() const;
 
   void addHeaders(HttpHeaders headers);
+  bool hasContentLength() const;
 
 private:
   static bool canCominedHeaders(const std::string &headerKey);

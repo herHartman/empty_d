@@ -246,7 +246,10 @@ int HttpRequestParser::onChunkComplete(http_parser *parser) {
   return http_request_parser->onChunkCompleteImpl(parser);
 }
 
-int HttpRequestParser::onHeadersCompleteImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::onHeadersCompleteImpl(http_parser *parser) {
+  mParseState = ParseState::HEADERS_COMPLETE;
+  return 0; 
+}
 
 int HttpRequestParser::onMessageBodyImpl(http_parser *parser, const char *data,
                                          size_t len) {
