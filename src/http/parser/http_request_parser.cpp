@@ -1,199 +1,277 @@
 #include "http_request_parser.hpp"
+#include "http/http_methods.h"
 #include "http/parser/http_parser/http_parser.h"
 #include "http/url_dispatcher.hpp"
+#include <boost/asio/any_io_executor.hpp>
 #include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace empty_d::http::protocol::parser {
 
-const http_parser_settings HttpRequestParser::settings_ = []() {
+const http_parser_settings HttpRequestParser::mSettings = []() {
   http_parser_settings settings{};
-  settings.on_message_begin = HttpRequestParser::OnMessageBegin;
-  settings.on_url = HttpRequestParser::OnUrl;
-  settings.on_status = HttpRequestParser::OnStatus;
-  settings.on_header_value = HttpRequestParser::OnHeaderValue;
-  settings.on_header_field = HttpRequestParser::OnHeaderValue;
-  settings.on_headers_complete = HttpRequestParser::OnHeadersComplete;
-  settings.on_body = HttpRequestParser::OnMessageBody;
-  settings.on_message_complete = HttpRequestParser::OnMessageComplete;
-  settings.on_chunk_header = HttpRequestParser::OnChunkHeader;
-  settings.on_chunk_complete = HttpRequestParser::OnChunkComplete;
+  settings.on_message_begin = HttpRequestParser::onMessageBegin;
+  settings.on_url = HttpRequestParser::onUrl;
+  settings.on_status = HttpRequestParser::onStatus;
+  settings.on_header_value = HttpRequestParser::onHeaderValue;
+  settings.on_header_field = HttpRequestParser::onHeaderField;
+  settings.on_headers_complete = HttpRequestParser::onHeadersComplete;
+  settings.on_body = HttpRequestParser::onMessageBody;
+  settings.on_message_complete = HttpRequestParser::onMessageComplete;
+  settings.on_chunk_header = HttpRequestParser::onChunkHeader;
+  settings.on_chunk_complete = HttpRequestParser::onChunkComplete;
   return settings;
 }();
 
-HttpRequestParser::HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher)
-    : parser_{},  url_parser_{},
-      request_builder_{std::move(url_dispatcher)},
-      current_header_field{}, state_{ParseState::INITED} {
-  http_parser_init(&parser_, HTTP_REQUEST);
-  http_parser_url_init(&url_parser_);
-  parser_.data = this;
+HttpRequestParser::HttpRequestParser(
+    std::shared_ptr<UrlDispatcher> urlDispatcher,
+    const boost::asio::any_io_executor &executor)
+    : mParser{}, mUrlParser{},
+      mRequestBuilder(std::move(urlDispatcher), executor),
+      mCurrentHeaderField{}, mParseState{ParseState::INITED} {
+  http_parser_init(&mParser, HTTP_REQUEST);
+  http_parser_url_init(&mUrlParser);
+  mParser.data = this;
 }
 
-int HttpRequestParser::OnMessageBegin(http_parser *parser) {
+int HttpRequestParser::onMessageBegin(http_parser *parser) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnMessageBeginImpl(parser);
+  return http_request_parser->onMessageBeginImpl(parser);
 }
 
-int HttpRequestParser::OnMessageComplete(http_parser *parser) {
+int HttpRequestParser::onMessageComplete(http_parser *parser) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnMessageCompleteImpl(parser);
+  return http_request_parser->onMessageCompleteImpl(parser);
 }
 
-int HttpRequestParser::OnMessageBody(http_parser *parser, const char *data,
+int HttpRequestParser::onMessageBody(http_parser *parser, const char *data,
                                      size_t lenght) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnMessageBodyImpl(parser, data, lenght);
+  return http_request_parser->onMessageBodyImpl(parser, data, lenght);
 }
 
-int HttpRequestParser::OnUrl(http_parser *parser, const char *data,
+int HttpRequestParser::onUrl(http_parser *parser, const char *data,
                              size_t lenght) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnUrlImpl(parser, data, lenght);
+  return http_request_parser->onUrlImpl(parser, data, lenght);
 }
 
-int HttpRequestParser::OnStatus(http_parser *parser, const char *data,
+int HttpRequestParser::onStatus(http_parser *parser, const char *data,
                                 size_t lenght) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnStatusImpl(parser, data, lenght);
+  return http_request_parser->onStatusImpl(parser, data, lenght);
 }
 
-int HttpRequestParser::OnHeaderField(http_parser *parser, const char *data,
+int HttpRequestParser::onHeaderField(http_parser *parser, const char *data,
                                      size_t lenght) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnHeaderFieldImpl(parser, data, lenght);
+  return http_request_parser->onHeaderFieldImpl(parser, data, lenght);
 }
 
-int HttpRequestParser::OnHeaderValue(http_parser *parser, const char *data,
+int HttpRequestParser::onHeaderValue(http_parser *parser, const char *data,
                                      size_t lenght) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnHeaderValueImpl(parser, data, lenght);
+  return http_request_parser->onHeaderValueImpl(parser, data, lenght);
 }
 
-int HttpRequestParser::OnHeadersComplete(http_parser *parser) {
+int HttpRequestParser::onHeadersComplete(http_parser *parser) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnHeadersCompleteImpl(parser);
+  return http_request_parser->onHeadersCompleteImpl(parser);
 }
 
-int HttpRequestParser::OnMessageBeginImpl(http_parser *parser) {
-  state_ = ParseState::IN_PROGRESS;
+int HttpRequestParser::onMessageBeginImpl(http_parser *parser) {
+  mParseState = ParseState::IN_PROGRESS;
+  switch (parser->method) {
+  case http_method::HTTP_DELETE:
+    break;
+  case http_method::HTTP_GET:
+  mRequestBuilder.AppendMethod(HttpMethods::HTTP_GET);
+    break;
+  case http_method::HTTP_HEAD:
+    break;
+  case http_method::HTTP_POST:
+    mRequestBuilder.AppendMethod(HttpMethods::HTTP_POST);
+    break;
+  case http_method::HTTP_PUT:
+    break;
+  case http_method::HTTP_CONNECT:
+    break;
+  case http_method::HTTP_OPTIONS:
+    break;
+  case http_method::HTTP_TRACE:
+    break;
+  case http_method::HTTP_COPY:
+    break;
+  case http_method::HTTP_LOCK:
+    break;
+  case http_method::HTTP_MKCOL:
+    break;
+  case http_method::HTTP_MOVE:
+    break;
+  case http_method::HTTP_PROPFIND:
+    break;
+  case http_method::HTTP_PROPPATCH:
+    break;
+  case http_method::HTTP_SEARCH:
+    break;
+  case http_method::HTTP_UNLOCK:
+    break;
+  case http_method::HTTP_BIND:
+    break;
+  case http_method::HTTP_REBIND:
+    break;
+  case http_method::HTTP_UNBIND:
+    break;
+  case http_method::HTTP_REPORT:
+    break;
+  case http_method::HTTP_MKACTIVITY:
+    break;
+  case http_method::HTTP_CHECKOUT:
+    break;
+  case http_method::HTTP_MERGE:
+    break;
+  case http_method::HTTP_MSEARCH:
+    break;
+  case http_method::HTTP_NOTIFY:
+    break;
+  case http_method::HTTP_SUBSCRIBE:
+    break;
+  case http_method::HTTP_UNSUBSCRIBE:
+    break;
+  case http_method::HTTP_PATCH:
+    break;
+  case http_method::HTTP_PURGE:
+    break;
+  case http_method::HTTP_MKCALENDAR:
+    break;
+  case http_method::HTTP_LINK:
+    break;
+  case http_method::HTTP_UNLINK:
+    break;
+  case http_method::HTTP_SOURCE:
+    break;
+  }
+
+  mRequestBuilder.AppendHttpVersion(std::to_string(parser->http_major));
   return 0;
 }
 
-int HttpRequestParser::OnStatusImpl(http_parser *parser, const char *data,
+int HttpRequestParser::onStatusImpl(http_parser *parser, const char *data,
                                     size_t lenght) {
 
   return 0;
 }
 
-int HttpRequestParser::OnMessageCompleteImpl(http_parser *parser) {
-  state_ = ParseState::COMPLETE;
+int HttpRequestParser::onMessageCompleteImpl(http_parser *parser) {
+  mParseState = ParseState::COMPLETE;
+  return 0;
 }
 
-int HttpRequestParser::OnUrlImpl(http_parser *parser, const char *data,
+int HttpRequestParser::onUrlImpl(http_parser *parser, const char *data,
                                  size_t len) {
   std::cout << std::string(data, data + len) << std::endl;
-  if (int res = http_parser_parse_url(data, len, 0, &url_parser_)) {
+  if (int res = http_parser_parse_url(data, len, 0, &mUrlParser)) {
     return res;
   }
 
-  if (url_parser_.field_set << UF_PATH) {
-    size_t path_offset = url_parser_.field_data[UF_PATH].off;
-    size_t path_len = url_parser_.field_data[UF_PATH].len;
-    request_builder_.AppendPath(std::string(data[path_offset], data[path_len]));
+  if (mUrlParser.field_set << UF_PATH) {
+    size_t path_offset = mUrlParser.field_data[UF_PATH].off;
+    size_t path_len = mUrlParser.field_data[UF_PATH].len;
+    mRequestBuilder.AppendPath(
+        std::string(data + path_offset, data + path_len));
   } else {
     return -1;
   }
 
-  if (url_parser_.field_set << UF_QUERY) {
-    size_t query_offset = url_parser_.field_data[UF_QUERY].off;
-    size_t query_len = url_parser_.field_data[UF_QUERY].len;
+  if (mUrlParser.field_set << UF_QUERY) {
+    size_t query_offset = mUrlParser.field_data[UF_QUERY].off;
+    size_t query_len = mUrlParser.field_data[UF_QUERY].len;
     size_t pos = query_offset;
     std::unordered_map<std::string, std::string> query;
     ParseQueryState s = ParseQueryState::QUERY_NAME;
     size_t current_part_begin_pos = pos;
     std::string current_query_name;
 
-    while (pos < query_len) {
+    while (pos < query_offset + query_len) {
       switch (s) {
       case ParseQueryState::QUERY_NAME:
         if (data[pos] == '=') {
-          s = ParseQueryState::QUERY_NAME;
+          s = ParseQueryState::QUERY_VALUE;
           current_query_name =
-              std::string(data[current_part_begin_pos], data[pos]);
+              std::string(data + current_part_begin_pos, data + pos);
           current_part_begin_pos = pos + 1;
         }
         ++pos;
         break;
       case ParseQueryState::QUERY_VALUE:
-        if (data[pos] == '&' || ++pos == query_len) {
+        if (data[pos] == '&' || ++pos == query_offset + query_len) {
           query[current_query_name] =
-              std::string(data[current_part_begin_pos], data[pos]);
-          s = ParseQueryState::QUERY_VALUE;
+              std::string(data + current_part_begin_pos, data + pos);
+          s = ParseQueryState::QUERY_NAME;
           current_part_begin_pos = pos + 1;
         }
         break;
       }
     }
-    request_builder_.AppendQuery(query);
+    mRequestBuilder.AppendQuery(query);
   }
-
   return 0;
 }
 
-int HttpRequestParser::OnHeaderFieldImpl(http_parser *parser, const char *data,
+int HttpRequestParser::onHeaderFieldImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  current_header_field = std::string(data, data[len]);
+  mCurrentHeaderField = std::string(data, data + len);
   return 0;
 }
 
-int HttpRequestParser::OnHeaderValueImpl(http_parser *parser, const char *data,
+int HttpRequestParser::onHeaderValueImpl(http_parser *parser, const char *data,
                                          size_t len) {
-
-  request_builder_.AppendHeader(
-      std::string(current_header_field.begin(), current_header_field.end()),
-      std::string(data, data[len]));
+  mRequestBuilder.AppendHeader(
+      std::string(mCurrentHeaderField.begin(), mCurrentHeaderField.end()),
+      std::string(data, data + len));
   return 0;
 }
 
-int HttpRequestParser::OnChunkHeader(http_parser *parser) {
+int HttpRequestParser::onChunkHeader(http_parser *parser) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnChunkHeaderImpl(parser);
+  return http_request_parser->onChunkHeaderImpl(parser);
 }
 
-int HttpRequestParser::OnChunkComplete(http_parser *parser) {
+int HttpRequestParser::onChunkComplete(http_parser *parser) {
   auto *http_request_parser = static_cast<HttpRequestParser *>(parser->data);
-  return http_request_parser->OnChunkCompleteImpl(parser);
+  return http_request_parser->onChunkCompleteImpl(parser);
 }
 
-int HttpRequestParser::OnHeadersCompleteImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::onHeadersCompleteImpl(http_parser *parser) { return 0; }
 
-int HttpRequestParser::OnMessageBodyImpl(http_parser *parser, const char *data,
+int HttpRequestParser::onMessageBodyImpl(http_parser *parser, const char *data,
                                          size_t len) {
-  request_builder_.AppendBody(std::string(data, data[len]));
+  mRequestBuilder.AppendBody(std::string(data, data + len));
+  return 0;
 }
 
-int HttpRequestParser::OnChunkHeaderImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::onChunkHeaderImpl(http_parser *parser) { return 0; }
 
-int HttpRequestParser::OnChunkCompleteImpl(http_parser *parser) { return 0; }
+int HttpRequestParser::onChunkCompleteImpl(http_parser *parser) { return 0; }
 
-void HttpRequestParser::Parse(const char *data, size_t length) {
-  size_t nparsed = http_parser_execute(&parser_, &settings_, data, length);
+void HttpRequestParser::parse(const char *data, size_t length) {
+  size_t nparsed = http_parser_execute(&mParser, &mSettings, data, length);
 }
 
-bool HttpRequestParser::ParseComplete() const {
-  return state_ == ParseState::COMPLETE;
+bool HttpRequestParser::parseComplete() const {
+  return mParseState == ParseState::COMPLETE;
 }
 
-std::pair<HttpRequest, HttpHandler> HttpRequestParser::BuildRequest() {
-  return request_builder_.BuildRequest();
+std::pair<HttpRequest, HttpHandler> HttpRequestParser::buildRequest() {
+  return mRequestBuilder.BuildRequest();
 }
 
-boost::optional<Resource> HttpRequestParser::GetResource() const {
-  return request_builder_.GetResource();
+boost::optional<Resource> HttpRequestParser::getResource() const {
+  return mRequestBuilder.GetResource();
 }
 
-}    // namespace empty_d::http::protocol::parser
+} // namespace empty_d::http::protocol::parser

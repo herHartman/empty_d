@@ -1,9 +1,10 @@
 #pragma once
 
-#include "http/parser/http_parser/http_parser.h"
 #include "http/http_request.h"
 #include "http/http_request_builder.h"
+#include "http/parser/http_parser/http_parser.h"
 #include "http/url_dispatcher.hpp"
+#include <boost/asio/any_io_executor.hpp>
 
 using empty_d::http::request::HttpRequest;
 using empty_d::http::request::HttpRequestBuilder;
@@ -11,53 +12,63 @@ using empty_d::http::request::HttpRequestBuilder;
 namespace empty_d::http::protocol::parser {
 class HttpRequestParser {
 public:
-  explicit HttpRequestParser(std::shared_ptr<UrlDispatcher> url_dispatcher);
-  
+  HttpRequestParser(std::shared_ptr<UrlDispatcher> urlDispatcher,
+                    const boost::asio::any_io_executor &executor);
+
   enum class ParseQueryState { QUERY_NAME, QUERY_VALUE };
 
   enum class ParseState { INITED, IN_PROGRESS, ERROR, COMPLETE };
 
-  int OnMessageBeginImpl(http_parser *parser);
-  int OnUrlImpl(http_parser *parser, const char *data, size_t lenght);
-  int OnStatusImpl(http_parser *parser, const char *data, size_t lenght);
-  int OnHeaderFieldImpl(http_parser *parser, const char *data, size_t lenght);
-  int OnHeaderValueImpl(http_parser *parser, const char *data, size_t lenght);
-  int OnHeadersCompleteImpl(http_parser *parser);
-  int OnMessageBodyImpl(http_parser *parser, const char *data, size_t lenght);
-  int OnMessageCompleteImpl(http_parser *parser);
+  int onMessageBeginImpl(http_parser *parser);
+  int onUrlImpl(http_parser *parser, const char *data, size_t lenght);
+  int onStatusImpl(http_parser *parser, const char *data, size_t lenght);
+  int onHeaderFieldImpl(http_parser *parser, const char *data, size_t lenght);
+  int onHeaderValueImpl(http_parser *parser, const char *data, size_t lenght);
+  int onHeadersCompleteImpl(http_parser *parser);
+  int onMessageBodyImpl(http_parser *parser, const char *data, size_t lenght);
+  int onMessageCompleteImpl(http_parser *parser);
 
-  int OnChunkHeaderImpl(http_parser *parser);
-  int OnChunkCompleteImpl(http_parser *parser);
+  int onChunkHeaderImpl(http_parser *parser);
+  int onChunkCompleteImpl(http_parser *parser);
 
-  static int OnMessageBegin(http_parser *parser);
-  static int OnUrl(http_parser *parser, const char *data, size_t lenght);
-  static int OnStatus(http_parser *parser, const char *data, size_t lenght);
-  static int OnHeaderField(http_parser *parser, const char *data,
+  static int onMessageBegin(http_parser *parser);
+  static int onUrl(http_parser *parser, const char *data, size_t lenght);
+  static int onStatus(http_parser *parser, const char *data, size_t lenght);
+  static int onHeaderField(http_parser *parser, const char *data,
                            size_t lenght);
-  static int OnHeaderValue(http_parser *parser, const char *data,
+  static int onHeaderValue(http_parser *parser, const char *data,
                            size_t lenght);
-  static int OnHeadersComplete(http_parser *parser);
-  static int OnMessageBody(http_parser *parser, const char *data,
+  static int onHeadersComplete(http_parser *parser);
+  static int onMessageBody(http_parser *parser, const char *data,
                            size_t lenght);
-  static int OnMessageComplete(http_parser *parser);
+  static int onMessageComplete(http_parser *parser);
 
-  static int OnChunkHeader(http_parser *parser);
-  static int OnChunkComplete(http_parser *parser);
+  static int onChunkHeader(http_parser *parser);
+  static int onChunkComplete(http_parser *parser);
 
-  void Parse(const char *data, size_t length);
+  void parse(const char *data, size_t length);
 
-  bool ParseComplete() const;
+  bool parseComplete() const;
 
-  std::pair<HttpRequest, HttpHandler> BuildRequest();
+  std::pair<HttpRequest, HttpHandler> buildRequest();
 
-  boost::optional<Resource> GetResource() const;
+  boost::optional<Resource> getResource() const;
+
+  HttpRequestParser(HttpRequestParser &) = delete;
+  HttpRequestParser(HttpRequestParser &&) = delete;
+  HttpRequestParser &operator=(const HttpRequestParser &) = delete;
+  HttpRequestParser &operator=(HttpRequestParser &&) = delete;
+
+  ~HttpRequestParser() {
+    std::cout << __PRETTY_FUNCTION__ << ": was destroid, " << std::endl;
+  }
 
 private:
-  static const http_parser_settings settings_;
-  http_parser parser_;
-  http_parser_url url_parser_;
-  HttpRequestBuilder request_builder_;
-  ParseState state_;
-  std::string current_header_field;
+  static const http_parser_settings mSettings;
+  http_parser mParser;
+  http_parser_url mUrlParser;
+  HttpRequestBuilder mRequestBuilder;
+  ParseState mParseState;
+  std::string mCurrentHeaderField;
 };
-}    // namespace empty_d::http::protocol::parser
+} // namespace empty_d::http::protocol::parser

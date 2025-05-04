@@ -7,6 +7,11 @@
 
 namespace empty_d::http::request {
 
+HttpRequestBuilder::HttpRequestBuilder(
+    std::shared_ptr<UrlDispatcher> urlDispatcher,
+    const boost::asio::any_io_executor &executor)
+    : mUrdispatcher(std::move(urlDispatcher)), mExecutor(executor) {}
+
 void HttpRequestBuilder::AppendHeaderField(const std::string &header_field) {
   current_header_field_ = header_field;
 }
@@ -27,9 +32,28 @@ void HttpRequestBuilder::AppendMethod(http::HttpMethods method) {
   method_ = method;
 }
 
-void HttpRequestBuilder::AppendPath(const std::string &path) {
-  path_ = path;
-  resource_ = url_dispatcher_->getResource(path);
+void HttpRequestBuilder::AppendPath(const std::string &path) { path_ = path; }
+
+void HttpRequestBuilder::AppendQuery(
+    const std::unordered_map<std::string, std::string> &query) {
+  query_ = query;
+}
+
+void HttpRequestBuilder::AppendHeader(const std::string &header_field,
+                                      const std::string &header_value) {
+  headers_.add(header_field, header_value);
+}
+
+void HttpRequestBuilder::AppendBody(std::string body) {
+  if (!body_reader_) {
+    body_reader_ = std::make_shared<request::HttpBodyStreamReader>(
+      mExecutor, headers_.getContentLength(), std::move(body));
+  }
+}
+
+std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
+  std::string path = path_.value();
+  resource_ = mUrdispatcher->getResource(path);
   if (resource_) {
     const auto &path_args = resource_->getPathArgs();
     for (auto &path_arg : path_args) {
@@ -44,25 +68,7 @@ void HttpRequestBuilder::AppendPath(const std::string &path) {
   } else {
     throw std::runtime_error("no match path");
   }
-}
 
-void HttpRequestBuilder::AppendQuery(
-    const std::unordered_map<std::string, std::string> &query) {
-  query_ = query;
-}
-
-void HttpRequestBuilder::AppendHeader(const std::string &header_field,
-                                      const std::string &header_value) {
-  headers_.add(header_field, header_value);
-}
-
-void HttpRequestBuilder::AppendBody(const std::string &body) {
-  if (!body_reader_) {
-    body_reader_ = std::make_shared<request::HttpBodyStreamReader>(nullptr, 0);
-  }
-}
-
-std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
   HttpHandler handler = nullptr;
   if (resource_ && method_) {
     handler = resource_->getHandler(method_.value());
@@ -76,19 +82,15 @@ std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
 
   size_t content_length = headers_.getContentLength();
   const std::string &host = headers_.getHost();
-  return {HttpRequest{content_length,
-                     method_.value(),
-                     std::move(headers_),
-                     host,
-                     std::move(http_version_.value()),
-                     std::shared_ptr<HttpBodyStreamReader>(nullptr),
-                     std::move(path_.value()),
-                     std::move(query_),
-                     std::move(path_args_)}, handler};
+  return {HttpRequest{content_length, method_.value(), std::move(headers_),
+                      host, std::move(http_version_.value()),
+                      std::move(body_reader_), std::move(path_.value()),
+                      std::move(query_), std::move(path_args_)},
+          handler};
 }
 
 boost::optional<Resource> HttpRequestBuilder::GetResource() const {
   return resource_;
 }
 
-}   // namespace empty_d::http::request
+} // namespace empty_d::http::request

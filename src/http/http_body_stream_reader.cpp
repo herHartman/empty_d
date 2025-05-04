@@ -10,21 +10,24 @@ void HttpBodyStreamReader::write(const std::string &data,
     mBuffer.reserve(2 * mBuffer.capacity());
   }
   mBuffer.append(data);
-  mBodyReadLock->cancel_one();
+  mBodyReadLock.cancel_one();
 }
 
 void HttpBodyStreamReader::setEof() {
   mEof = true;
-  mBodyReadLock->cancel_one();
+  mBodyReadLock.cancel_one();
 }
 
 std::string HttpBodyStreamReader::readAny(boost::asio::yield_context yield) {
   while (mBuffer.empty() && !mEof) {
-    mBodyReadLock->async_wait(yield);
+    mBodyReadLock.async_wait(yield);
   }
-
   std::string result = std::move(mBuffer);
   mBuffer.clear();
+  mDataReadSize += result.size();
+  if (mDataReadSize == mBodyContentLength) {
+    setEof();
+  }
   return result;
 }
 } // namespace empty_d::http::request

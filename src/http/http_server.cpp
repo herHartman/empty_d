@@ -8,43 +8,44 @@
 #include <exception>
 #include <mutex>
 
-
 namespace empty_d::http {
 
-
 void ConnectionsManager::startHandleConnection(
-    std::shared_ptr<HttpConnection> connection, const boost::asio::any_io_executor& io) {
+    std::shared_ptr<HttpConnection> connection,
+    const boost::asio::any_io_executor &io) {
   {
     std::lock_guard<std::mutex> lock{mConnectionsMutex};
     mActiveConnections.insert(connection);
   }
 
-  boost::asio::spawn(io,
-                     [this, connection](boost::asio::yield_context yield) {
-                       try {
-                         connection->handle(yield);
-                       } catch (const std::exception &ex) {
-                         std::cout << "error handle http request, error was "
-                                   << ex.what() << std::endl;
-                       }
-                       {
-                         std::lock_guard<std::mutex> lock{mConnectionsMutex};
-                         mActiveConnections.erase(connection);
-                       }
-                     });
+  boost::asio::spawn(io, [this, conn = std::move(connection)](
+                             boost::asio::yield_context yield) {
+    try {
+      conn->handle(yield);
+    } catch (const std::exception &ex) {
+      std::cout << "error handle http request, error was " << ex.what()
+                << std::endl;
+    }
+    {
+      std::lock_guard<std::mutex> lock{mConnectionsMutex};
+      mActiveConnections.erase(conn);
+    }
+  });
 }
 
 void ConnectionsManager::stopHandleConnection(
-    std::shared_ptr<HttpConnection> connection, boost::asio::io_context& IOContext) {}
+    std::shared_ptr<HttpConnection> connection,
+    boost::asio::io_context &IOContext) {}
 
 void ConnectionsManager::stopAll() {}
 
 void HttpServer::acceptLoop(boost::asio::yield_context yield) {
   while (mIsRunning) {
     auto socket = mAcceptor.async_accept(yield);
-    auto connection = std::make_shared<HttpConnection>(
-        protocol::parser::HttpRequestParser{mUrlDispatcher}, std::move(socket));
-    mConnectionsManager.startHandleConnection(connection, mAcceptor.get_executor());
+    auto connection =
+        std::make_shared<HttpConnection>(mUrlDispatcher, std::move(socket));
+    mConnectionsManager.startHandleConnection(std::move(connection),
+                                              mAcceptor.get_executor());
   }
 }
 
@@ -73,4 +74,3 @@ void HttpServer::shutDown() {
 }
 
 } // namespace empty_d::http
-

@@ -53,8 +53,7 @@ size_t HttpHeaders::erase(const HeaderKey &key) { return mHeaders.erase(key); }
 void HttpHeaders::clear() noexcept { mHeaders.clear(); }
 
 void HttpHeaders::set(const HeaderKey &key, HeaderValue value) {
-  mHeaders[key].clear();
-  mHeaders.insert({key, {std::move(value)}});
+  mHeaders[key] = {std::move(value)};
 }
 
 void HttpHeaders::set(const HeaderKey &key, std::vector<HeaderValue> values) {

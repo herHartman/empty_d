@@ -41,6 +41,7 @@ void UrlDispatcher::addHandler(HttpHandler handler, HttpMethods method,
     }
     Resource new_resource{path, std::move(args)};
     new_resource.addHandler(handler, method);
+    routes_.insert({path, std::move(new_resource)});
   }
 }
 
