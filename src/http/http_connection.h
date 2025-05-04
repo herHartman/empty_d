@@ -29,7 +29,7 @@ public:
                       HttpRequest &request, boost::asio::yield_context yield);
 
 private:
-  void readAndParseData(protocol::parser::HttpRequestParser &requestParser,
+  size_t readAndParseData(protocol::parser::HttpRequestParser &requestParser,
                         size_t bufferSize, boost::asio::yield_context yield);
 
   std::shared_ptr<UrlDispatcher> mUrlDispatcher;

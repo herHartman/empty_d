@@ -49,6 +49,7 @@ public:
   void parse(const char *data, size_t length);
 
   bool parseComplete() const;
+  bool parseMessageComplete() const;
 
   std::pair<HttpRequest, HttpHandler> buildRequest();
 
@@ -58,10 +59,6 @@ public:
   HttpRequestParser(HttpRequestParser &&) = delete;
   HttpRequestParser &operator=(const HttpRequestParser &) = delete;
   HttpRequestParser &operator=(HttpRequestParser &&) = delete;
-
-  ~HttpRequestParser() {
-    std::cout << __PRETTY_FUNCTION__ << ": was destroid, " << std::endl;
-  }
 
 private:
   static const http_parser_settings mSettings;

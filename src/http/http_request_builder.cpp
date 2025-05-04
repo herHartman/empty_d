@@ -56,7 +56,6 @@ void HttpRequestBuilder::onHeadersComplete() {
     body_reader_ = std::make_shared<request::HttpBodyStreamReader>(
         mExecutor, headers_.getContentLength());
   }
-  
 }
 
 std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
@@ -91,9 +90,9 @@ std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
   size_t content_length = headers_.getContentLength();
   const std::string &host = headers_.getHost();
   return {HttpRequest{content_length, method_.value(), std::move(headers_),
-                      host, std::move(http_version_.value()),
-                      std::move(body_reader_), std::move(path_.value()),
-                      std::move(query_), std::move(path_args_)},
+                      host, std::move(http_version_.value()), body_reader_,
+                      std::move(path_.value()), std::move(query_),
+                      std::move(path_args_)},
           handler};
 }
 

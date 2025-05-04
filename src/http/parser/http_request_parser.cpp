@@ -248,6 +248,7 @@ int HttpRequestParser::onChunkComplete(http_parser *parser) {
 
 int HttpRequestParser::onHeadersCompleteImpl(http_parser *parser) {
   mParseState = ParseState::HEADERS_COMPLETE;
+  mRequestBuilder.onHeadersComplete();
   return 0; 
 }
 
@@ -267,6 +268,10 @@ void HttpRequestParser::parse(const char *data, size_t length) {
 
 bool HttpRequestParser::parseComplete() const {
   return mParseState == ParseState::COMPLETE;
+}
+
+bool HttpRequestParser::parseMessageComplete() const {
+  return mParseState == ParseState::HEADERS_COMPLETE;
 }
 
 std::pair<HttpRequest, HttpHandler> HttpRequestParser::buildRequest() {

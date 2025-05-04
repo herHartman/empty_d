@@ -74,6 +74,7 @@ public:
     response.setStatus(empty_d::http::HttpStatus::HTTP_OK);
     auto responseBody = std::make_unique<empty_d::http::TextResponseBody>();
     responseBody->setBody(std::move(requestBody));
+    response.setBody(std::move(responseBody));
     return response;
   }
 };

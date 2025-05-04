@@ -18,14 +18,17 @@
 #include <boost/system/detail/error_code.hpp>
 #include <boost/variant.hpp>
 #include <memory>
+#include <stdexcept>
 
 namespace empty_d::http {
+
+constexpr size_t kMaxMessageSize = 16 * 1024;
 
 HttpConnection::HttpConnection(std::shared_ptr<UrlDispatcher> urlDispatcher,
                                tcp::socket socket)
     : mUrlDispatcher(std::move(urlDispatcher)), mSocket(std::move(socket)) {}
 
-void HttpConnection::readAndParseData(
+size_t HttpConnection::readAndParseData(
     protocol::parser::HttpRequestParser &requestParser, size_t bufferSize,
     boost::asio::yield_context yield) {
   // Рассчитываем размер чтения
@@ -34,13 +37,15 @@ void HttpConnection::readAndParseData(
 
   // Читаем данные (async_read_some)
   boost::asio::mutable_buffer buffer = mReadBuffer.prepare(readSize);
-  size_t bytesTransferred =
-      boost::asio::async_read(mSocket, boost::asio::buffer(buffer), yield);
 
+  size_t bytesTransferred =
+      mSocket.async_read_some(boost::asio::buffer(buffer), yield);
   // Фиксируем прочитанные данные
   mReadBuffer.commit(bytesTransferred);
   requestParser.parse(mBucket.data(), bytesTransferred);
   mReadBuffer.consume(readSize);
+
+  return readSize;
 }
 
 void HttpConnection::readRequestBody(
@@ -51,9 +56,14 @@ void HttpConnection::readRequestBody(
   mSocket.get_option(option);
   size_t osBufferSize = option.value();
 
+  std::size_t totalReadMessageSize{0};
   while (not parser.parseComplete()) {
-    readAndParseData(parser, osBufferSize, yield);
+    size_t readMessageSize = readAndParseData(parser, osBufferSize, yield);
+    totalReadMessageSize += readMessageSize;
   }
+
+  std::cout << "total receive bytes from body " << totalReadMessageSize
+            << std::endl;
 }
 
 void HttpConnection::handle(boost::asio::yield_context yield) {
@@ -67,18 +77,27 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
   boost::asio::steady_timer readTimer(mSocket.get_executor());
   boost::system::error_code ec;
 
-  while (not requestParser.parseComplete()) {
+  std::size_t totalReadMessageSize{0};
+  while (not(requestParser.parseMessageComplete() ||
+             requestParser.parseComplete())) {
     readAndParseData(requestParser, osBufferSize, yield);
+    if (totalReadMessageSize >= kMaxMessageSize) {
+      throw std::runtime_error("receive large http message");
+    }
   }
 
+  std::cout << "total receive bytes from message " << totalReadMessageSize
+            << std::endl;
   std::pair<HttpRequest, empty_d::http::HttpHandler> buidRequestResult =
       requestParser.buildRequest();
-
-  boost::asio::spawn(
-      mSocket.get_executor(),
-      [this, &requestParser](boost::asio::yield_context yield) mutable {
-        readRequestBody(yield, requestParser);
-      });
+  
+  if (not requestParser.parseComplete()) {
+    boost::asio::spawn(
+        mSocket.get_executor(),
+        [this, &requestParser](boost::asio::yield_context yield) mutable {
+          readRequestBody(yield, requestParser);
+        });
+  }
 
   buidRequestResult.second(shared_from_this(), buidRequestResult.first, yield);
 

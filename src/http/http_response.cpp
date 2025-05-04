@@ -2,6 +2,8 @@
 #include "http/http_headers.h"
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/write.hpp>
+#include <memory>
+#include <string>
 
 namespace empty_d::http {
 
@@ -37,6 +39,10 @@ bool HttpResponse::addHeader(const std::string &name, std::string value) {
 }
 
 HttpStatus HttpResponse::getStatus() const { return mStatus; }
+
+void HttpResponse::setBody(std::unique_ptr<BaseResponseBody> responseBody) {
+  mResponseBody = std::move(responseBody);
+}
 
 void HttpResponse::setStatus(HttpStatus status) { mStatus = status; }
 
@@ -84,7 +90,9 @@ void HttpResponse::addHeaders(HttpHeaders headers) {
 }
 
 void HttpResponse::prepareHeaders() {
-  mHeaders.addHeaders(mResponseBody->buildSpecificBodyHeaders());
+  if (mResponseBody) {
+    mHeaders.addHeaders(mResponseBody->buildSpecificBodyHeaders());
+  }
 }
 
 void HttpResponse::sendResponse(tcp::socket &socket,
@@ -92,9 +100,9 @@ void HttpResponse::sendResponse(tcp::socket &socket,
 
 {
   prepareHeaders();
-  std::string serializedHeaders = mHeaders.formatHeaders();
-  boost::asio::async_write(socket, boost::asio::buffer(serializedHeaders),
-                           yield);
+  std::string result = "HTTP/1.1 " + std::to_string(mStatus) + " ok\r\n\r\n" +
+                       mHeaders.formatHeaders();
+  boost::asio::async_write(socket, boost::asio::buffer(result), yield);
   mResponseBody->sendBody(socket, yield);
 }
 

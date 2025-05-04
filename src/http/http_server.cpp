@@ -3,34 +3,32 @@
 #include "http/http_connection.h"
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/compose.hpp>
+#include <boost/asio/impl/spawn.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <exception>
-#include <mutex>
 
 namespace empty_d::http {
 
 void ConnectionsManager::startHandleConnection(
     std::shared_ptr<HttpConnection> connection,
     const boost::asio::any_io_executor &io) {
-  {
-    std::lock_guard<std::mutex> lock{mConnectionsMutex};
-    mActiveConnections.insert(connection);
-  }
 
-  boost::asio::spawn(io, [this, conn = std::move(connection)](
-                             boost::asio::yield_context yield) {
+  auto handleConnection = [this, connection = std::move(connection)](
+                              boost::asio::yield_context yield) mutable {
+    mActiveConnections.insert(connection);
     try {
-      conn->handle(yield);
+      connection->handle(yield);
     } catch (const std::exception &ex) {
       std::cout << "error handle http request, error was " << ex.what()
                 << std::endl;
     }
-    {
-      std::lock_guard<std::mutex> lock{mConnectionsMutex};
-      mActiveConnections.erase(conn);
-    }
-  });
+    mActiveConnections.erase(connection);
+  };
+  
+  boost::asio::spawn(boost::asio::make_strand(io), handleConnection);
 }
 
 void ConnectionsManager::stopHandleConnection(
@@ -41,7 +39,30 @@ void ConnectionsManager::stopAll() {}
 
 void HttpServer::acceptLoop(boost::asio::yield_context yield) {
   while (mIsRunning) {
-    auto socket = mAcceptor.async_accept(yield);
+    boost::system::error_code ec;
+    boost::asio::ip::tcp::socket socket{mAcceptor.get_executor()};
+    mAcceptor.async_accept(socket, yield[ec]);
+    if (not mAcceptor.is_open()) {
+      std::cout << "Acceptor was be a closed" << std::endl;
+      return;
+    } else if (ec == boost::asio::error::operation_aborted) {
+      std::cout << "Accept operation aborted" << std::endl;
+      return;
+    } else if (ec) {
+      std::cout << "Accept failed: " << ec.message() << std::endl;
+      if (ec == boost::system::errc::too_many_files_open ||
+          ec == boost::system::errc::too_many_files_open_in_system ||
+          ec == boost::system::errc::no_buffer_space ||
+          ec == boost::system::errc::not_enough_memory) {
+        std::cout << "Try reopen accept..." << std::endl;
+
+        // TODO sleep async
+        continue;
+      }
+
+      std::cout << "Accept was be a stopped" << std::endl;
+      return;
+    }
     auto connection =
         std::make_shared<HttpConnection>(mUrlDispatcher, std::move(socket));
     mConnectionsManager.startHandleConnection(std::move(connection),
