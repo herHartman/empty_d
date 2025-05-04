@@ -12,6 +12,8 @@
 
 namespace empty_d::http {
 
+using boost::asio::ip::tcp;
+
 void ConnectionsManager::startHandleConnection(
     std::shared_ptr<HttpConnection> connection,
     const boost::asio::any_io_executor &io) {
@@ -27,7 +29,7 @@ void ConnectionsManager::startHandleConnection(
     }
     mActiveConnections.erase(connection);
   };
-  
+
   boost::asio::spawn(boost::asio::make_strand(io), handleConnection);
 }
 
@@ -71,20 +73,53 @@ void HttpServer::acceptLoop(boost::asio::yield_context yield) {
 }
 
 void HttpServer::start() {
-  boost::asio::ip::tcp::resolver resolver(mAcceptor.get_executor());
-  boost::asio::ip::tcp::endpoint endpoint =
-      *resolver.resolve(mAddress, mPort).begin();
-  mAcceptor.open(endpoint.protocol());
-  mAcceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-  mAcceptor.bind(endpoint);
-  mAcceptor.listen();
-  mIsRunning = true;
+  try {
+    boost::system::error_code ec;
+    tcp::resolver resolver(mAcceptor.get_executor());
 
-  boost::asio::spawn(
-      mAcceptor.get_executor(),
-      [this](boost::asio::yield_context yield) { acceptLoop(yield); });
+    tcp::resolver::results_type endpoints =
+        resolver.resolve(mAddress, mPort, ec);
 
-  mPool.join();
+    if (ec || endpoints.empty()) {
+      std::cerr << "Resolve failed: " << ec.message() << "\n";
+      return;
+    }
+
+    mAcceptor.open(endpoints->endpoint().protocol(), ec);
+    if (ec) {
+      std::cerr << "Acceptor open failed: " << ec.message() << "\n";
+      return;
+    }
+
+    mAcceptor.set_option(tcp::acceptor::reuse_address(true), ec);
+    if (ec) {
+      std::cerr << "Set reuse_address failed: " << ec.message() << "\n";
+      mAcceptor.close();
+      return;
+    }
+
+    mAcceptor.bind(endpoints->endpoint(), ec);
+    if (ec) {
+      std::cerr << "Bind failed: " << ec.message() << "\n";
+      mAcceptor.close();
+      return;
+    }
+
+    mAcceptor.listen(tcp::socket::max_listen_connections, ec);
+    if (ec) {
+      std::cerr << "Listen failed: " << ec.message() << "\n";
+      mAcceptor.close();
+      return;
+    }
+
+    mIsRunning = true;
+    boost::asio::spawn(
+        mAcceptor.get_executor(),
+        [this](boost::asio::yield_context yield) { acceptLoop(yield); });
+    mPool.join();
+  } catch (const std::exception &e) {
+    std::cerr << "Server start failed: " << e.what() << "\n";
+  }
 }
 
 void HttpServer::shutDown() {

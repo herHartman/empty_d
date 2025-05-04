@@ -5,6 +5,7 @@
 #include "http/url_dispatcher.hpp"
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/spawn.hpp>
 #include <memory>
 
@@ -27,6 +28,9 @@ public:
                       HttpRequest &request, boost::asio::yield_context yield);
   void processRequest(std::unique_ptr<StreamResponseHttpHandlerBase> handler,
                       HttpRequest &request, boost::asio::yield_context yield);
+  
+  void close();
+  const tcp::socket::executor_type& getExecutor();
 
 private:
   size_t readAndParseData(protocol::parser::HttpRequestParser &requestParser,

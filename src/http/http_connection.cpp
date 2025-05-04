@@ -90,7 +90,7 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
             << std::endl;
   std::pair<HttpRequest, empty_d::http::HttpHandler> buidRequestResult =
       requestParser.buildRequest();
-  
+
   if (not requestParser.parseComplete()) {
     boost::asio::spawn(
         mSocket.get_executor(),
@@ -100,8 +100,6 @@ void HttpConnection::handle(boost::asio::yield_context yield) {
   }
 
   buidRequestResult.second(shared_from_this(), buidRequestResult.first, yield);
-
-  mSocket.close();
 }
 
 void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler,
@@ -109,6 +107,12 @@ void HttpConnection::processRequest(std::unique_ptr<HttpHandlerBase> handler,
                                     boost::asio::yield_context yield) {
   HttpResponse response = handler->handleRequest(request, yield);
   response.sendResponse(mSocket, yield);
+}
+
+void HttpConnection::close() { mSocket.close(); }
+
+const tcp::socket::executor_type &HttpConnection::getExecutor() {
+  return mSocket.get_executor();
 }
 
 } // namespace empty_d::http

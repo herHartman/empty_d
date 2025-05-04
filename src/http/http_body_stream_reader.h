@@ -5,7 +5,6 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/spawn.hpp>
-#include <iostream>
 #include <iterator>
 #include <string>
 
