@@ -6,6 +6,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/spawn.hpp>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 using boost::asio::ip::tcp;
@@ -15,34 +16,43 @@ class HttpBodyStreamReader {
 public:
   HttpBodyStreamReader(const boost::asio::any_io_executor &executor,
                        size_t body_content_legnt)
-      : mBodyReadLock(executor), mBodyContentLength(body_content_legnt), mDataReadSize(0) {
-    mBuffer.reserve(8096);
-  }
-
-  HttpBodyStreamReader(const boost::asio::any_io_executor &executor,
-                       size_t body_content_legnt, std::string body)
       : mBodyReadLock(executor), mBodyContentLength(body_content_legnt),
-        mBuffer(std::move(body)), mDataReadSize(0) {
-    mBuffer.reserve(8096);
-  }
+        mDataReadSize(0) {}
 
+  size_t bytesRemaining() const;
+  bool isWriteComplete() const;
   std::string text();
-  void write(const std::string &data, boost::asio::yield_context yield);
+
+  template <typename Iterator> void write(Iterator begin, Iterator end);
+
   std::string readAny(boost::asio::yield_context yield);
 
   void setEof();
 
   [[nodiscard]] bool isEof() const { return mEof; }
 
-  ~HttpBodyStreamReader() {
-    std::cout << __PRETTY_FUNCTION__ << ": try destroy " << std::endl;
-  }
-
 private:
+  boost::asio::streambuf mBuffer;
   size_t mBodyContentLength;
   boost::asio::steady_timer mBodyReadLock;
   bool mEof = false;
   size_t mDataReadSize;
-  std::string mBuffer{};
+  size_t mTotalWritten{};
+  // std::string mBuffer{};
 };
+
+template <typename Iterator>
+void HttpBodyStreamReader::write(Iterator begin, Iterator end) {
+  const size_t addSize = std::distance(begin, end);
+
+  const size_t writeSize = std::min(addSize, bytesRemaining());
+
+  boost::asio::buffer_copy(mBuffer.prepare(addSize),
+                           boost::asio::buffer(&*begin, addSize));
+
+  mBuffer.commit(addSize);
+  mTotalWritten += writeSize;
+  mBodyReadLock.cancel();
+}
+
 } // namespace empty_d::http::request

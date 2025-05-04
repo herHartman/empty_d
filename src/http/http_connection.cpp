@@ -30,19 +30,20 @@ void HttpConnection::readRequestBody(
   mSocket.get_option(option);
   size_t osBufferSize = option.value();
 
-  while (not body->isEof()) {
-    size_t availableSpace = mReadBuffer.max_size() - mReadBuffer.size();
+  boost::asio::streambuf readBuf;
+  while (not body->isWriteComplete()) {
+    size_t availableSpace = readBuf.max_size() - readBuf.size();
     size_t readSize = std::min(availableSpace, osBufferSize);
 
     // Читаем данные (async_read_some)
-    boost::asio::mutable_buffer buffer = mReadBuffer.prepare(readSize);
     size_t bytesTransferred =
-        mSocket.async_read_some(boost::asio::buffer(buffer), yield);
+        mSocket.async_read_some(readBuf.prepare(readSize), yield);
 
     // Фиксируем прочитанные данные
-    mReadBuffer.commit(bytesTransferred);
-    body->write(mBucket, yield);
-    mReadBuffer.consume(readSize);
+    readBuf.commit(bytesTransferred);
+    body->write(boost::asio::buffers_begin(readBuf.data()),
+                boost::asio::buffers_end(readBuf.data()));
+    readBuf.consume(readSize);
   }
 }
 

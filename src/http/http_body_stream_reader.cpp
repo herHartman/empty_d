@@ -1,29 +1,36 @@
 #include "http_body_stream_reader.h"
+#include <boost/asio/buffers_iterator.hpp>
+#include <stdexcept>
 
 namespace empty_d::http::request {
 
-std::string HttpBodyStreamReader::text() { return {}; }
-
-void HttpBodyStreamReader::write(const std::string &data,
-                                 boost::asio::yield_context yield) {
-  if (mBuffer.capacity() < (mBuffer.size() + data.length())) {
-    mBuffer.reserve(2 * mBuffer.capacity());
-  }
-  mBuffer.append(data);
-  mBodyReadLock.cancel_one();
+size_t HttpBodyStreamReader::bytesRemaining() const {
+  return mBodyContentLength - mTotalWritten;
 }
+
+bool HttpBodyStreamReader::isWriteComplete() const {
+  return mBodyContentLength == mTotalWritten;
+}
+
+std::string HttpBodyStreamReader::text() { return {}; }
 
 void HttpBodyStreamReader::setEof() {
   mEof = true;
-  mBodyReadLock.cancel_one();
 }
 
 std::string HttpBodyStreamReader::readAny(boost::asio::yield_context yield) {
-  while (mBuffer.empty() && !mEof) {
+  if (mEof) {
+    throw std::runtime_error("stream eof");
+  }
+
+  while (mBuffer.size() == 0) {
     mBodyReadLock.async_wait(yield);
   }
-  std::string result = std::move(mBuffer);
-  mBuffer.clear();
+
+  std::string result{boost::asio::buffers_begin(mBuffer.data()),
+                     boost::asio::buffers_end(mBuffer.data())};
+
+  mBuffer.consume(result.size());
   mDataReadSize += result.size();
   if (mDataReadSize == mBodyContentLength) {
     setEof();

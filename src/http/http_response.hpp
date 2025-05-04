@@ -8,6 +8,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/json.hpp>
 #include <boost/json/fwd.hpp>
+#include <boost/json/serialize.hpp>
 #include <boost/json/value.hpp>
 #include <boost/json/value_from.hpp>
 #include <boost/variant.hpp>
@@ -114,8 +115,9 @@ template <typename T>
 auto TextResponseBody::setBody(T &&responseBody)
     -> std::enable_if_t<
         empty_d::json_serialization::has_tag_invoke_value_from_v<T>, void> {
-  std::string responseBodyJson = boost::json::value_to<std::string>(
-      boost::json::value_from<T>(std::forward<T>(responseBody)));
+  boost::json::value jv =
+      boost::json::value_from<T>(std::forward<T>(responseBody));
+  auto responseBodyJson = boost::json::serialize(jv);
 
   mContentType = "application/json";
   mResponseBody = std::move(responseBodyJson);
@@ -134,7 +136,7 @@ auto TextResponseBody::setBody(T &&responseBody)
 template <typename T>
 auto TextResponseBody::setBody(T &&responseBody)
     -> std::enable_if_t<std::is_same_v<std::string, T>, void> {
-  
+
   mResponseBody = std::forward<T>(responseBody);
   mContentType = "text/plain";
 }

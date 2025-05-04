@@ -47,8 +47,10 @@ void HttpRequestBuilder::AppendHeader(const std::string &header_field,
 void HttpRequestBuilder::AppendBody(std::string body) {
   if (!body_reader_) {
     body_reader_ = std::make_shared<request::HttpBodyStreamReader>(
-      mExecutor, headers_.getContentLength(), std::move(body));
+        mExecutor, headers_.getContentLength());
   }
+
+  body_reader_->write(body.begin(), body.end());
 }
 
 std::pair<HttpRequest, HttpHandler> HttpRequestBuilder::BuildRequest() {
